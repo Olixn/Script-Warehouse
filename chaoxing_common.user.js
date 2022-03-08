@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         超星网课助手(非考试版) for Ne-21
-// @version      4.1.5
+// @version      4.1.6
 // @namespace    Ne-21
-// @description  [自动切换旧版学习通][修复视频黑屏][修复视频倍速]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
+// @description  [修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
 // @author       Ne-21
 // @match        *://*.chaoxing.com/*
 // @match        *://*.edu.cn/*
@@ -109,7 +109,7 @@ String.prototype.toCDB = function () {
     }).replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/。/g, '.');
 };
 
-setting.normal = ''; 
+setting.normal = '';
 setting.job = [':not(*)'];
 
 setting.video && setting.job.push('iframe[src*="/video/index.html"]');
@@ -129,7 +129,7 @@ if (url == '/mycourse/studentstudy') {
     });
 } else if (url == '/ananas/modules/video/index.html' && setting.video) {
     if (setting.review) _self.greenligth = Ext.emptyFn;
-    checkPlayer(_self.supportH5Video());
+    checkPlayer();
 } else if (url == '/work/doHomeWorkNew' || url == '/api/work' || url == '/work/addStudentWorkNewWeb' || url == '/mooc2/work/dowork') {
     console.log("进入答题界面！");
     if (!UE) {
@@ -141,21 +141,22 @@ if (url == '/mycourse/studentstudy') {
     }
 } else if (url == '/ananas/modules/audio/index.html' && setting.audio) {
     if (setting.review) _self.greenligth = Ext.emptyFn;
-    // _self.videojs = hookAudio;
-    let saveconfig=null
+    _self.videojs = hookAudio;
+    hookAudio.xhr = vjs.xhr;
+    let saveconfig = null
     _self.alert = console.log;
-    _self.videojs.hook('beforesetup', function(videoEl, options) {
+    _self.videojs.hook('beforesetup', function (videoEl, options) {
         var config = options;
         config.plugins.studyControl.enableSwitchWindow = 1;
         config.plugins.seekBarControl.enableFastForward = 1;
         if (!setting.queue) delete config.plugins.studyControl;
-        saveconfig=config
+        saveconfig = config
         return config;
     });
-    _self.videojs.hook('setup', function(player) {
+    _self.videojs.hook('setup', function (player) {
 
         var
-        a = '<a href="https://d0.ananas.chaoxing.com/download/' + _self.config('objectid') + '" target="_blank">',
+            a = '<a href="https://d0.ananas.chaoxing.com/download/' + _self.config('objectid') + '" target="_blank">',
             img = '<img src="https://pic.521daigua.cn/dw.svg" style="margin: 6px 0 0 6px;">';
         player.volume(Math.round(setting.vol) / 100 || 0);
         player.playbackRate(setting.rate > 16 || setting.rate < 0.0625 ? 1 : setting.rate);
@@ -239,71 +240,148 @@ function jobSort($) {
     }, setting.time);
 }
 
-function checkPlayer(tip) {
-// _self.videojs = hookVideo;
-_self.alert = console.log;
-let saveconfig=null
-_self.videojs.hook('beforesetup', function(videoEl, options) {
-    var config = options;
-    if (!config) {
-        return options;
+function checkPlayer() {
+    var data = $.parseJSON($(frameElement).attr('data')),
+        danmaku = data && data.danmaku ? data.danmaku : 0;
+    if (setting.player == 'flash') {
+        _self.showHTML5Player = _self.showMoocPlayer;
+        danmaku = 1;
+    } else if (setting.player == 'html5') {
+        _self.showMoocPlayer = _self.showHTML5Player;
+        danmaku = 0;
     }
-    var line = Ext.Array.filter(Ext.Array.map(config.playlines, function (value, index) {
-        return value.label == setting.line && index;
-    }), function (value) {
-        return Ext.isNumber(value);
-    })[0] || 0,
-        http = Ext.Array.filter(config.sources, function (value) {
-            return value.label == setting.http;
-        })[0];
-    config.playlines.unshift(config.playlines[line]);
-    config.playlines.splice(line + 1, 1);
-    config.plugins.videoJsResolutionSwitcher.default = http ? http.res : 360;
-    config.plugins.studyControl.enableSwitchWindow = 1;
-    config.plugins.timelineObjects.url = '/richvideo/initdatawithviewer?';
-    config.plugins.seekBarControl.enableFastForward = 1;
-    config.playbackRates = [0.5, 1, 1.5, 2, 4, 8, 16];
-    if (!setting.queue) delete config.plugins.studyControl;
-    saveconfig=config
-    return config;
-});
-_self.videojs.hook('setup', function(player) {
-
-    var 
-    a = '<a href="https://d0.ananas.chaoxing.com/download/' + _self.config('objectid') + '" target="_blank">',
-        img = '<img src="https://pic.521daigua.cn/dw.svg" style="margin: 6px 0 0 6px;">';
-    player.playbackRate = function (t) { if (void 0 === t) return; this.tech_ && this.tech_.featuresPlaybackRate ? this.cache_.lastPlaybackRate || this.techGet_("playbackRate") : setting.rate; this.techCall_("setPlaybackRate", t) };
-    player.volume(Math.round(setting.vol) / 100 || 0);
-    Ext.get(player.controlBar.addChild('Button').el_).setHTML(a + img + '</a>').dom.title = '下载视频';
-    player.on('loadstart', function () {
-        setting.tip && this.play().catch(Ext.emptyFn);
-        this.playbackRate(setting.rate > 16 || setting.rate < 0.0625 ? 1 : setting.rate);
-    });
-    player.one(['loadedmetadata', 'firstplay'], function () {
-        setting.two = setting.rate === '0' && setting.two < 1;
-        setting.two && saveconfig.plugins.seekBarControl.sendLog(this.children_[0], 'ended', Math.floor(this.cache_.duration));
-    });
-    player.on('ended', function () {
-        Ext.fly(frameElement).parent().addCls('ans-job-finished');
-    });
-});
-    // hookVideo.xhr = vjs.xhr;
-    Ext.isSogou = Ext.isIos = Ext.isAndroid = false;
-    var data = Ext.decode(_self.config('data')) || {};
-    delete data.danmaku;
-    data.doublespeed = 1;
-    frameElement.setAttribute('data', Ext.encode(data));
-    if (tip) return;
-    _self.supportH5Video = function () { return true; };
-    alert('此浏览器不支持html5播放器，请更换浏览器');
+    var $video = $('.ans-job-icon + iframe[src*="/video/index.html"]', parent.document),
+        $job = $video.not('.ans-job-finished > iframe');
+    setting.tip = false;
+    if (!$job.length) {
+    } else if ($job[0] == frameElement) {
+        setting.tip = true;
+    } else {
+        setInterval(function () {
+            if ($video.not('.ans-job-finished > iframe')[0] == frameElement) {
+                location.reload();
+            }
+        }, setting.time);
+    }
+    if (!danmaku && _self.supportH5Video()) {
+        hookVideo();
+    } else if (_self.flashChecker().hasFlash) {
+        hookJQuery();
+    }
 }
-
 function hookVideo() {
-
+    var vj = _self.ans.VideoJs.prototype,
+        Hooks = vj.params2VideoOpt;
+    vj.params2VideoOpt = function () {
+        var config = Hooks.apply(this, arguments),
+            line = config.playlines.findIndex(function (currentValue) {
+                return currentValue.label == setting.line;
+            }),
+            http = config.sources.find(function (currentValue) {
+                return currentValue.label == setting.http;
+            });
+        config.playlines.unshift(config.playlines[line]);
+        config.playlines.splice(line + 1, 1);
+        config.plugins.videoJsResolutionSwitcher.default = http ? http.res : 360;
+        config.plugins.studyControl.enableSwitchWindow = 1;
+        config.plugins.timelineObjects.url = '/richvideo/initdatawithviewer?';
+        setting.tip && (config.autoplay = true);
+        setting.muted && (config.muted = true);
+        if (setting.rate) {
+            config.plugins.seekBarControl.enableFastForward = setting.rate;
+            config.playbackRates = [1, 1.25, 1.5, 2, 4, 8, 16];
+        }
+        vj.params2VideoOpt = Hooks;
+        return config;
+    };
 }
 
-function hookAudio() {
+function hookJQuery() {
+    var Hooks = varHooks();
+    Hooks.set(_self, 'jQuery', function (target, propertyName, ignored, jQuery) {
+        Hooks.set(jQuery.fn, 'cxplayer', function (target, propertyName, oldValue, newValue) {
+            return Hooks.apply(newValue, function (target, thisArg, args) {
+                var config = args[0];
+                config.datas.isDefaultPlay = setting.tip;
+                config.enableSwitchWindow = 1;
+                config.datas.currVideoInfo.resourceUrl = '/richvideo/initdatawithviewer?';
+                config.datas.currVideoInfo.dftLineIndex = config.datas.currVideoInfo.getVideoUrl.match(/{.+?}/g).findIndex(function (currentValue) {
+                    return currentValue.includes(setting.line + setting.http);
+                });
+                setting.drag && (config.datas.currVideoInfo.getVideoUrl = config.datas.currVideoInfo.getVideoUrl.replace(/&drag=false&/, '&drag=true&'));
+                var $player = setting.muted ? Hooks.Reply.apply(arguments) : $();
+                $player.on('onStart', function () {
+                    for (var i = 0; i < 16; i++) {
+                        $player.addVolNum(false);
+                    }
+                });
+                return Hooks.Reply.apply(arguments);
+            });
+        });
+        return Hooks.Reply.set(arguments);
+    });
+}
 
+function varHooks() {
+    /**
+     * Hooks.js v1.1.3 | xymopen
+     * xuyiming.open@outlook.com
+     * https://github.com/xymopen/JS_Utilities/blob/master/Hooks.js
+     */
+    var Hooks = {
+        apply: function apply(target, onApply) {
+            if ('function' === typeof target && 'function' === typeof onApply) {
+                return function () {
+                    return onApply.call(this, target, this, arguments);
+                };
+            } else {
+                throw new TypeError();
+            }
+        },
+        property: function property(target, propertyName, onGet, onSet) {
+            var descriptor, oldValue;
+            if (Object.prototype.hasOwnProperty.call(target, propertyName)) {
+                descriptor = Object.getOwnPropertyDescriptor(target, propertyName);
+                if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+                    oldValue = descriptor.value;
+                    delete descriptor.value;
+                    delete descriptor.writable;
+                } else if (Object.prototype.hasOwnProperty.call(descriptor, 'get')) {
+                    oldValue = descriptor.get.call(target);
+                } else {
+                    oldValue = undefined;
+                }
+            } else {
+                descriptor = {
+                    'configurable': true,
+                    'enumerable': true
+                };
+                oldValue = undefined;
+            }
+            descriptor.get = function get() {
+                return onGet.call(this, target, propertyName, oldValue);
+            };
+            descriptor.set = function set(newValue) {
+                oldValue = onSet.call(this, target, propertyName, oldValue, newValue);
+                return oldValue;
+            };
+            Object.defineProperty(target, propertyName, descriptor);
+        },
+        set: function set(target, propertyName, onSet) {
+            return Hooks.property(target, propertyName, function (target, propertyName, oldValue) {
+                return Hooks.Reply.set(arguments);
+            }, onSet);
+        }
+    };
+    Hooks.Reply = {
+        apply: function apply(param) {
+            return param[0].apply(param[1], param[2]);
+        },
+        set: function (param) {
+            return param[param.length - 1];
+        }
+    };
+    return Hooks;
 }
 
 function relieveLimit() {
