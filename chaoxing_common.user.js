@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         超星网课助手(非考试版) for Ne-21
+// @name         超星网课助手(非考试版)|聚合题库|自动挂机|支持章节、作业、视频
 // @version      4.1.7
-// @namespace    Ne-21
+// @namespace    Lemon_tea
 // @description  [修复视频倍速、静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
-// @author       Ne-21
+// @author       Lemon_tea
 // @match        *://*.chaoxing.com/*
 // @match        *://*.edu.cn/*
 // @match        *://*.nbdlib.cn/*
@@ -21,6 +21,9 @@
 // @homepage     https://script.521daigua.cn
 // @original-script https://greasyfork.org/scripts/369625
 // @original-author wyn665817
+// @original-license MIT
+// @original-script https://scriptcat.org/script-show-page/10
+// @original-author coder_tq
 // @original-license MIT
 // ==/UserScript==
 
@@ -141,8 +144,13 @@ if (url == '/mycourse/studentstudy') {
     }
 } else if (url == '/ananas/modules/audio/index.html' && setting.audio) {
     if (setting.review) _self.greenligth = Ext.emptyFn;
+     /**
+     * Author Big Artist 李恒道
+     * 
+     * https://bbs.tampermonkey.net.cn/thread-1859-1-1.html
+     */
     let OriginPlayer = _self["videojs"]["getComponent"]("Player");
-    let zhizheburuaihe = function (qb, options, qc) {
+    let lhdyyds = function (qb, options, qc) {
         var config = options;
         config["plugins"]["studyControl"]["enableSwitchWindow"] = 1;
         config["plugins"]["seekBarControl"]["enableFastForward"] = 1;
@@ -235,9 +243,14 @@ function jobSort($) {
 
 
 function checkPlayer(tip) {
+     /**
+     * Author Big Artist 李恒道
+     * 
+     * https://bbs.tampermonkey.net.cn/thread-1859-1-1.html
+     */
     _self.alert = console.log;
     let OriginPlayer = _self["videojs"]["getComponent"]("Player");
-    let zhizheburuaihe = function (qd, options, qf) {
+    let lhdyyds = function (qd, options, qf) {
         let config = options;
         if (!config) {
             return options;
@@ -281,8 +294,8 @@ function checkPlayer(tip) {
         });
         return player;
     };
-    zhizheburuaihe["prototype"] = Object["create"](OriginPlayer["prototype"]);
-    _self["videojs"]["registerComponent"]("Player", zhizheburuaihe);
+    lhdyyds["prototype"] = Object["create"](OriginPlayer["prototype"]);
+    _self["videojs"]["registerComponent"]("Player", lhdyyds);
     Ext.isSogou = Ext.isIos = Ext.isAndroid = false;
     var data = Ext.decode(_self.config('data')) || {};
     delete data.danmaku;
