@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         超星网课助手(非考试版)|聚合题库|自动挂机|支持章节、作业、视频
-// @version      4.1.7
+// @version      4.1.8
 // @namespace    Lemon_tea
 // @description  [修复视频倍速、静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
 // @author       Lemon_tea
@@ -144,34 +144,38 @@ if (url == '/mycourse/studentstudy') {
     }
 } else if (url == '/ananas/modules/audio/index.html' && setting.audio) {
     if (setting.review) _self.greenligth = Ext.emptyFn;
-     /**
-     * Author Big Artist 李恒道
-     * 
-     * https://bbs.tampermonkey.net.cn/thread-1859-1-1.html
-     */
-    let OriginPlayer = _self["videojs"]["getComponent"]("Player");
-    let lhdyyds = function (qb, options, qc) {
+    /**
+    * Author Big Artist 李恒道
+    * https://scriptcat.org/script-show-page/10
+    * https://bbs.tampermonkey.net.cn/
+    */
+    _self.alert = console.log;
+    let OriginPlayer = _self.videojs.getComponent('Player')
+    let woailiyinhe = function (tag, options, ready) {
         var config = options;
-        config["plugins"]["studyControl"]["enableSwitchWindow"] = 1;
-        config["plugins"]["seekBarControl"]["enableFastForward"] = 1;
-        if (!setting["queue"]) delete config["plugins"]["studyControl"];
-        let player = OriginPlayer["call"](this, qb, options, qc);
-        var downa = "<a href=\"https://d0.ananas.chaoxing.com/download/" + _self["config"]("objectid") + "\" target=\"_blank\">",
-            downb = "<img src=\"\" style=\"margin: 6px 0 0 6px;\">";
-        player["volume"](Math["round"](setting["vol"]) / 100 || 0);
-        player["playbackRate"](setting["rate"] > 16 || setting["rate"] < 0.0625 ? 1 : setting["rate"]);
-        Ext["get"](player["controlBar"]["addChild"]("Button")["el_"])["setHTML"](downa + downb + "</a>")["dom"]["title"] = "下载音频";
-        player["on"]("loadeddata", function () {
-            setting["tip"] && this["play"]()["catch"](Ext["emptyFn"]);
+        config.plugins.studyControl.enableSwitchWindow = 1;
+        config.plugins.seekBarControl.enableFastForward = 1;
+        if (!setting.queue) delete config.plugins.studyControl;
+        let player = OriginPlayer.call(this, tag, options, ready)
+        var
+            a = '<a href="https://d0.ananas.chaoxing.com/download/' + _self.config('objectid') + '" target="_blank">',
+            img = '<img src="https://d0.ananas.chaoxing.com/download/e363b256c0e9bc5bd8266bf99dd6d6bb" style="margin: 6px 0 0 6px;">';
+        player.volume(Math.round(setting.vol) / 100 || 0);
+        player.playbackRate(setting.rate > 16 || setting.rate < 0.0625 ? 1 : setting.rate);
+        Ext.get(player.controlBar.addChild('Button').el_).setHTML(a + img + '</a>').dom.title = '下载音频';
+        player.on('loadeddata', function () {
+            setting.tip && this.play().catch(Ext.emptyFn);
         });
-        player["one"]("firstplay", function () {
-            setting["rate"] === "0" && config["plugins"]["seekBarControl"]["sendLog"](this["children_"][0], "ended", Math["floor"](this["cache_"]["duration"]));
+        player.one('firstplay', function () {
+            setting.rate === '0' && config.plugins.seekBarControl.sendLog(this.children_[0], 'ended', Math.floor(this.cache_.duration));
         });
-        player["on"]("ended", function () {
-            Ext["fly"](frameElement)["parent"]()["addCls"]("ans-job-finished");
+        player.on('ended', function () {
+            Ext.fly(frameElement).parent().addCls('ans-job-finished');
         });
         return player;
-    };
+    }
+    woailiyinhe.prototype = Object.create(OriginPlayer.prototype)
+    _self.videojs.getComponent('Component').components_['Player'] = woailiyinhe
 } else if (url == '/ananas/modules/innerbook/index.html' && setting.book && setting.tip) {
     setTimeout(function () {
         _self.setting ? _self.top.onchangepage(_self.getFrameAttr('end')) : _self.greenligth();
@@ -243,59 +247,56 @@ function jobSort($) {
 
 
 function checkPlayer(tip) {
-     /**
-     * Author Big Artist 李恒道
-     * 
-     * https://bbs.tampermonkey.net.cn/thread-1859-1-1.html
-     */
+    /**
+    * Author Big Artist 李恒道
+    * https://scriptcat.org/script-show-page/10
+    * https://bbs.tampermonkey.net.cn/
+    */
     _self.alert = console.log;
-    let OriginPlayer = _self["videojs"]["getComponent"]("Player");
-    let lhdyyds = function (qd, options, qf) {
-        let config = options;
+    let OriginPlayer = _self.videojs.getComponent('Player')
+    let woailiyinhe = function (tag, options, ready) {
+        let config = options
         if (!config) {
             return options;
         }
-        var line = Ext["Array"]["filter"](Ext["Array"]["map"](config["playlines"], function (value, index) {
-            return value["label"] == setting["line"] && index;
+        var line = Ext.Array.filter(Ext.Array.map(config.playlines, function (value, index) {
+            return value.label == setting.line && index;
         }), function (value) {
-            return Ext["isNumber"](value);
+            return Ext.isNumber(value);
         })[0] || 0,
-            _0x1c624f = Ext["Array"]["filter"](config["sources"], function (value) {
-                return value["label"] == setting["http"];
+            http = Ext.Array.filter(config.sources, function (value) {
+                return value.label == setting.http;
             })[0];
-        config["playlines"]["unshift"](config["playlines"][line]);
-        config["playlines"]["splice"](line + 1, 1);
-        config["plugins"]["videoJsResolutionSwitcher"]["default"] = _0x1c624f ? _0x1c624f["res"] : 360;
-        config["plugins"]["studyControl"]["enableSwitchWindow"] = 1;
-        config["plugins"]["timelineObjects"]["url"] = "/richvideo/initdatawithviewer?";
-        config["plugins"]["seekBarControl"]["enableFastForward"] = 1;
-        config["playbackRates"] = [0.5, 1, 1.5, 2, 4, 8, 16];
-        if (!setting["queue"]) delete config["plugins"]["studyControl"];
-        let player = OriginPlayer["call"](this, qd, options, qf);
-        var downa = "<a href=\"https://d0.ananas.chaoxing.com/download/" + _self["config"]("objectid") + "\" target=\"_blank\">",
-            downb = "<img src=\"\" style=\"margin: 6px 0 0 6px;\">";
-        player["playbackRate"] = function (qa) {
-            if (void 0 === qa) return;
-            this["tech_"] && this["tech_"]["featuresPlaybackRate"] ? this["cache_"]["lastPlaybackRate"] || this["techGet_"]("playbackRate") : setting["rate"];
-            this["techCall_"]("setPlaybackRate", qa);
-        };
-        player["volume"](Math["round"](setting["vol"]) / 100 || 0);
-        Ext["get"](player["controlBar"]["addChild"]("Button")["el_"])["setHTML"](downa + downb + "</a>")["dom"]["title"] = "下载视频";
-        player["on"]("loadstart", function () {
-            setting["tip"] && this["play"]()["catch"](Ext["emptyFn"]);
-            this["playbackRate"](setting["rate"] > 16 || setting["rate"] < 0.0625 ? 1 : setting["rate"]);
+        config.playlines.unshift(config.playlines[line]);
+        config.playlines.splice(line + 1, 1);
+        config.plugins.videoJsResolutionSwitcher.default = http ? http.res : 360;
+        config.plugins.studyControl.enableSwitchWindow = 1;
+        config.plugins.timelineObjects.url = '/richvideo/initdatawithviewer?';
+        config.plugins.seekBarControl.enableFastForward = 1;
+        config.playbackRates = [0.5, 1, 1.5, 2, 4, 8, 16];
+        if (!setting.queue) delete config.plugins.studyControl;
+        let player = OriginPlayer.call(this, tag, options, ready)
+        var
+            a = '<a href="https://d0.ananas.chaoxing.com/download/' + _self.config('objectid') + '" target="_blank">',
+            img = '<img src="https://d0.ananas.chaoxing.com/download/e363b256c0e9bc5bd8266bf99dd6d6bb" style="margin: 6px 0 0 6px;">';
+        player.playbackRate = function (t) { if (void 0 === t) return; this.tech_ && this.tech_.featuresPlaybackRate ? this.cache_.lastPlaybackRate || this.techGet_("playbackRate") : setting.rate; this.techCall_("setPlaybackRate", t) };
+        player.volume(Math.round(setting.vol) / 100 || 0);
+        Ext.get(player.controlBar.addChild('Button').el_).setHTML(a + img + '</a>').dom.title = '下载视频';
+        player.on('loadstart', function () {
+            setting.tip && this.play().catch(Ext.emptyFn);
+            this.playbackRate(setting.rate > 16 || setting.rate < 0.0625 ? 1 : setting.rate);
         });
-        player["one"](["loadedmetadata", "firstplay"], function () {
-            setting["two"] = setting["rate"] === "0" && setting["two"] < 1;
-            setting["two"] && config["plugins"]["seekBarControl"]["sendLog"](this["children_"][0], "ended", Math["floor"](this["cache_"]["duration"]));
+        player.one(['loadedmetadata', 'firstplay'], function () {
+            setting.two = setting.rate === '0' && setting.two < 1;
+            setting.two && config.plugins.seekBarControl.sendLog(this.children_[0], 'ended', Math.floor(this.cache_.duration));
         });
-        player["on"]("ended", function () {
-            Ext["fly"](frameElement)["parent"]()["addCls"]("ans-job-finished");
+        player.on('ended', function () {
+            Ext.fly(frameElement).parent().addCls('ans-job-finished');
         });
         return player;
-    };
-    lhdyyds["prototype"] = Object["create"](OriginPlayer["prototype"]);
-    _self["videojs"]["registerComponent"]("Player", lhdyyds);
+    }
+    woailiyinhe.prototype = Object.create(OriginPlayer.prototype)
+    _self.videojs.getComponent('Component').components_['Player'] = woailiyinhe
     Ext.isSogou = Ext.isIos = Ext.isAndroid = false;
     var data = Ext.decode(_self.config('data')) || {};
     delete data.danmaku;
