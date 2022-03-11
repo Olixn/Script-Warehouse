@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         超星网课助手(非考试版)|聚合题库|自动挂机|支持章节、作业、视频
-// @version      4.1.8
+// @version      4.1.9
 // @namespace    Lemon_tea
 // @description  [修复视频倍速、静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
 // @author       Lemon_tea
@@ -133,6 +133,7 @@ if (url == '/mycourse/studentstudy') {
 } else if (url == '/ananas/modules/video/index.html' && setting.video) {
     if (setting.review) _self.greenligth = Ext.emptyFn;
     checkPlayer(_self.supportH5Video());
+    click_bo();
 } else if (url == '/work/doHomeWorkNew' || url == '/api/work' || url == '/work/addStudentWorkNewWeb' || url == '/mooc2/work/dowork') {
     console.log("进入答题界面！");
     if (!UE) {
@@ -245,7 +246,14 @@ function jobSort($) {
     }, setting.time);
 }
 
-
+/*来自油猴*/
+function click_bo(){
+    setInterval(function () {
+        if (document.querySelector("#video > button")){
+          document.querySelector("#video > button").click()
+        }
+    }, setting.time);
+}
 function checkPlayer(tip) {
     /**
     * Author Big Artist 李恒道
