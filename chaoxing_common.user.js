@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         超星网课助手(非考试版)|聚合题库|自动挂机|支持章节、作业、视频
-// @version      4.1.9
-// @namespace    Lemon_tea
-// @description  [修复视频倍速、静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
-// @author       Lemon_tea
+// @version      4.1.10
+// @namespace    Lemon_Tea
+// @description  [修复视频静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
+// @author       Lemon_Tea
 // @match        *://*.chaoxing.com/*
 // @match        *://*.edu.cn/*
 // @match        *://*.nbdlib.cn/*
@@ -210,7 +210,7 @@ if (url == '/mycourse/studentstudy') {
     setting.username && getSchoolId();
 } else if (location.hostname == 'i.mooc.chaoxing.com' || location.hostname == 'i.chaoxing.com') {
     _self.layui.use('layer', function () {
-        this.layer.open({ content: '拖动进度条、倍速播放、秒过会导致不良记录！题库在慢慢补充，搜不到的题目系统会尽快进行自动补充，最新脚本更新发布官网：http://521daigua.cn', title: '超星网课助手提示', btn: '我已知悉', offset: 't', closeBtn: 0 });
+        this.layer.open({ content: '拖动进度条、倍速播放、秒过会导致不良记录！题库在慢慢补充，搜不到的题目系统会尽快进行自动补充，最新脚本更新发布官网：http://521daigua.cn，最近学习通更新频繁，建议使用程序（https://blog.gocos.cn/archives/216.html）刷视频，脚本刷测验题。', title: '超星网课助手提示', btn: '我已知悉', offset: 't', closeBtn: 0 });
     });
 } else if (url == '/widget/pcvote/goStudentVotePage') {
     $(':checked').click();
@@ -247,12 +247,15 @@ function jobSort($) {
 }
 
 /*来自油猴*/
-function click_bo(){
+function click_bo() {
     setInterval(function () {
-        if (document.querySelector("#video > button")){
-          document.querySelector("#video > button").click()
+        if (document.querySelector("#video > button")) {
+            document.querySelector("#video > button").click()
         }
-    }, setting.time);
+        if (document.querySelector('#video > div > div > button[title="静音"]')) {
+            document.querySelector('#video > div > div > button[title="静音"]').click()
+        }
+    }, 1000);
 }
 function checkPlayer(tip) {
     /**
