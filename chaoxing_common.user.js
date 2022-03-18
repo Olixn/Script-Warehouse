@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         超星网课助手(非考试版)|聚合题库|自动挂机|支持章节、作业、视频
-// @version      4.1.10
+// @version      4.1.11
 // @namespace    Lemon_Tea
 // @description  [修复视频静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
 // @author       Lemon_Tea
@@ -248,15 +248,27 @@ function jobSort($) {
 
 /*来自油猴*/
 function click_bo() {
-    setInterval(function () {
-        if (document.querySelector("#video > button")) {
-            document.querySelector("#video > button").click()
+    var now=Date.now();
+    var interval=setInterval(function () {
+        var suspend=document.querySelector("#video > div.vjs-control-bar > button.vjs-play-control.vjs-control.vjs-button.vjs-paused");
+        if (getIframe().parent().is('.ans-job-finished')){
+            console.log("播放完毕");
+            clearInterval(interval);
+        }else if (suspend &&suspend.textContent=="播放"){
+            if (now+20000<Date.now()){
+                document.querySelector("#video > button").click();
+                now=Date.now();
+            }
+        }else if (document.querySelector("#video > button")){
+            document.querySelector("#video > button").click();
+            now=Date.now();
         }
-        if (document.querySelector('#video > div > div > button[title="静音"]')) {
+        if (document.querySelector('#video > div > div > button[title="静音"]')&&setting.vol=="0") {
             document.querySelector('#video > div > div > button[title="静音"]').click()
         }
-    }, 1000);
+    }, Math.floor(Math.random() * 3000) + 2000);
 }
+
 function checkPlayer(tip) {
     /**
     * Author Big Artist 李恒道
