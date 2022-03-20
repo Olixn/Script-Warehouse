@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         超星网课助手(非考试版)|聚合题库|自动挂机|支持章节、作业、视频
-// @version      4.1.12
+// @version      4.1.13
 // @namespace    Lemon_Tea
 // @description  [修复视频静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
 // @author       Lemon_Tea
@@ -259,16 +259,16 @@ function click_bo() {
                 GM_setValue("video_url",0);
                 clearInterval(interval);
             }else if (suspend &&suspend.textContent=="播放"&&video_url==GM_getValue("video_url")){
-                video.play()
+                video.play();
             }else if (document.querySelector("#video > button")&&GM_getValue("video_url")==0){
-                document.querySelector("#video > button").click();
+                video.play();
                 GM_setValue("video_url",video_url);
             }
             if (document.querySelector('#video > div > div > button[title="静音"]')&&setting.vol=="0") {
-                document.querySelector('#video > div > div > button[title="静音"]').click()
+                video.muted="0";
             }
         }
-    }, 500);
+    }, Math.floor(Math.random() * 3000) + 500);
 }
 
 function checkPlayer(tip) {
