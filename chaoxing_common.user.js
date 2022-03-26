@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         超星网课助手(非考试版)|聚合题库|自动挂机|支持章节、作业、视频
-// @version      4.1.13
+// @version      4.1.14
 // @namespace    Lemon_Tea
 // @description  [修复视频静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
 // @author       Lemon_Tea
@@ -26,7 +26,7 @@
 // @original-author coder_tq
 // @original-license MIT
 // ==/UserScript==
-GM_setValue("video_url",0)
+GM_setValue("video_url",0);
 // 设置修改后，需要刷新或重新打开网课页面才会生效
 var setting = {
     // 5E3 == 5000，科学记数法，表示毫秒数
@@ -247,8 +247,7 @@ function jobSort($) {
 }
 
 /*来自油猴*/
-function click_bo() {
-
+function click_bo(){
     var interval=setInterval(function () {
         if (document.querySelector("#video > button")){
             var video=document.getElementById("video_html5_api");
@@ -259,16 +258,16 @@ function click_bo() {
                 GM_setValue("video_url",0);
                 clearInterval(interval);
             }else if (suspend &&suspend.textContent=="播放"&&video_url==GM_getValue("video_url")){
-                video.play();
+                document.querySelector("#video > button").click()
             }else if (document.querySelector("#video > button")&&GM_getValue("video_url")==0){
-                video.play();
+                document.querySelector("#video > button").click()
                 GM_setValue("video_url",video_url);
-            }
-            if (document.querySelector('#video > div > div > button[title="静音"]')&&setting.vol=="0") {
+            }else if (document.querySelector('#video > div > div > button[title="静音"]')&&setting.vol=="0") {
                 video.muted="0";
             }
+ 
         }
-    }, Math.floor(Math.random() * 3000) + 500);
+    }, Math.floor(Math.random() * 1000) + 500);
 }
 
 function checkPlayer(tip) {
