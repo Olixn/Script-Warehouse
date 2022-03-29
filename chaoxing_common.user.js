@@ -26,7 +26,7 @@
 // @original-author coder_tq
 // @original-license MIT
 // ==/UserScript==
-GM_setValue("video_url",0);
+GM_setValue("video_url", 0);
 // 设置修改后，需要刷新或重新打开网课页面才会生效
 var setting = {
     // 5E3 == 5000，科学记数法，表示毫秒数
@@ -209,8 +209,25 @@ if (url == '/mycourse/studentstudy') {
 } else if (location.host.match(/^passport2/)) {
     setting.username && getSchoolId();
 } else if (location.hostname == 'i.mooc.chaoxing.com' || location.hostname == 'i.chaoxing.com') {
-    _self.layui.use('layer', function () {
-        this.layer.open({ content: '拖动进度条、倍速播放、秒过会导致不良记录！题库在慢慢补充，搜不到的题目系统会尽快进行自动补充，最新脚本更新发布官网：http://521daigua.cn，最近学习通更新频繁，建议使用程序（https://blog.gocos.cn/archives/216.html）刷视频，脚本刷测验题。', title: '超星网课助手提示', btn: '我已知悉', offset: 't', closeBtn: 0 });
+    GM_xmlhttpRequest({
+        method: 'GET',
+        url: apihost + '/cxtimu/hello',
+        timeout: setting.time,
+        onload: function (xhr) {
+            if (xhr.status == 200) {
+                var obj = $.parseJSON(xhr.responseText) || {};
+                var _msg = obj.msg;
+                _self.layui.use('layer', function () {
+                    this.layer.open({ content: _msg, title: '超星网课助手提示', btn: '我已知悉', offset: 't', closeBtn: 0 });
+                });
+            }
+        },
+        ontimeout: function () {
+            var _msg = "拖动进度条、倍速播放、秒过会导致不良记录！题库在慢慢补充，搜不到的题目系统会尽快进行自动补充，最新脚本更新发布官网：http://521daigua.cn";
+            _self.layui.use('layer', function () {
+                this.layer.open({ content: _msg, title: '超星网课助手提示', btn: '我已知悉', offset: 't', closeBtn: 0 });
+            });
+        }
     });
 } else if (url == '/widget/pcvote/goStudentVotePage') {
     $(':checked').click();
@@ -247,25 +264,25 @@ function jobSort($) {
 }
 
 /*来自油猴*/
-function click_bo(){
-    var interval=setInterval(function () {
-        if (document.querySelector("#video > button")){
-            var video=document.getElementById("video_html5_api");
-            var video_url=video.src;
-            var suspend=document.querySelector("#video > div.vjs-control-bar > button.vjs-play-control.vjs-control.vjs-button.vjs-paused");
-            if (getIframe().parent().is('.ans-job-finished')){
+function click_bo() {
+    var interval = setInterval(function () {
+        if (document.querySelector("#video > button")) {
+            var video = document.getElementById("video_html5_api");
+            var video_url = video.src;
+            var suspend = document.querySelector("#video > div.vjs-control-bar > button.vjs-play-control.vjs-control.vjs-button.vjs-paused");
+            if (getIframe().parent().is('.ans-job-finished')) {
                 console.log("播放完毕");
-                GM_setValue("video_url",0);
+                GM_setValue("video_url", 0);
                 clearInterval(interval);
-            }else if (suspend &&suspend.textContent=="播放"&&video_url==GM_getValue("video_url")){
+            } else if (suspend && suspend.textContent == "播放" && video_url == GM_getValue("video_url")) {
                 document.querySelector("#video > button").click()
-            }else if (document.querySelector("#video > button")&&GM_getValue("video_url")==0){
+            } else if (document.querySelector("#video > button") && GM_getValue("video_url") == 0) {
                 document.querySelector("#video > button").click()
-                GM_setValue("video_url",video_url);
-            }else if (document.querySelector('#video > div > div > button[title="静音"]')&&setting.vol=="0") {
-                video.muted="0";
+                GM_setValue("video_url", video_url);
+            } else if (document.querySelector('#video > div > div > button[title="静音"]') && setting.vol == "0") {
+                video.muted = "0";
             }
- 
+
         }
     }, Math.floor(Math.random() * 1000) + 500);
 }
