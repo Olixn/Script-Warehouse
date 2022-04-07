@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
 // @namespace           nawlgzs@gmail.com
-// @version             1.0
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此600行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：视频1倍速、文档秒过、答题、收录答案。未来：作业、考试
+// @version             1.1
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此600行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：视频倍速\秒过、文档秒过、答题、收录答案。未来：作业、考试
 // @author              Ne-21
 // @match               *://*chaoxing.com*
 // @connect             api.gocos.cn
@@ -12,28 +12,34 @@
 // @grant               GM_setValue
 // @grant               GM_getValue
 // @require             https://lib.baomitu.com/jquery/2.0.0/jquery.min.js
+// @supportURL          https://script.521daigua.cn/UserGuide/faq.html
+// @homepage            https://script.521daigua.cn
 // @license             MIT
 // ==/UserScript==
+
+var setting = {
+    rate: 1, // 视频倍速，0为秒过，1为正常速率，最高16倍
+    review: 0, // 复习模式，0为关闭，1为开启可以补挂视频时长
+    sub: 1, // 测验自动提交设置，0为关闭,1为开启,关闭会自动保存答案
+}
 
 var _w = unsafeWindow,
     _l = location,
     _d = _w.document,
     $ = _w.jQuery || top.jQuery,
-    UE = _w.UE,
-    sub = 1,
     _host = "https://api.gocos.cn";
 
 
-var _mlist, _defaults, _domList, $subBtn, $saveBtn, $frame_c;
-GM_setValue('video_result', 0)
+var _mlist, _defaults, _domList, _video, $subBtn, $saveBtn, $frame_c;
 
 if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     showTips();
 } else if (_l.pathname == '/mycourse/stu') {
 
 } else if (_l.pathname == '/mycourse/studentstudy') {
-    showBox();
+    showBox()
 } else if (_l.pathname == '/knowledge/cards') {
+    showBox()
     if ($("html").html().indexOf("章节未开放！") != -1 && _l.href.indexOf("ut=s") != -1) {
         _l.href = _l.href.replace("ut=s", "ut=t");
     }
@@ -88,12 +94,14 @@ function showTips() {
 }
 
 function showBox() {
-    var box_html = `<div style="border: 2px dashed rgb(0, 85, 68); width: 330px; position: fixed; top: 5%; right: 20%; z-index: 99999; background-color: rgba(184, 247, 255, 1); overflow-x: auto;">
+    if ($('#ne-21notice')[0] == undefined) {
+        var box_html = `<div style="border: 2px dashed rgb(0, 85, 68); width: 330px; position: fixed; top: 5%; right: 20%; z-index: 99999; background-color: rgba(184, 247, 255, 1); overflow-x: auto;">
         <h3 style="text-align: center;">超星学习小助手 By Ne-21</h3>
         <div id="ne-21notice" style="border-top: 1px solid #000;border-bottom: 1px solid #000;margin: 4px 0px;overflow: hidden;"></div>
         <div id="ne-21log" style="max-height:100px;"></div>
     </div>`;
-    $(box_html).appendTo('body');
+        $(box_html).appendTo('body');
+    }
     GM_xmlhttpRequest({
         method: 'GET',
         url: _host + '/index.php/cxapi/cxtimu/notice',
@@ -167,6 +175,12 @@ function getEnc(a, b, c, d, e, f, g) {
 
 function toNext() {
     refreshCourseList().then((res) => {
+        if (setting.review) {
+            setTimeout(() => {
+                $('#mainid > .prev_next.next').click()
+            }, 5000)
+            return
+        }
         let _t = []
         $.each($(res).find('li'), (_, t) => {
             let curid = $(t).find('.posCatalog_select').attr('id'),
@@ -243,10 +257,12 @@ function missonVideo(dom, obj) {
         jobId = obj['property']['jobid'],
         name = obj['property']['name'],
         objectId = obj['property']['objectid'];
-    if (isPassed == true) {
+    if (!setting.review && isPassed == true) {
         logger('视频：' + name + '检测已完成，准备处理下一个任务', 'green')
         switchMission()
         return
+    } else {
+        logger('已开启复习模式，开始处理视频：' + name, 'pink')
     }
     $.ajax({
         url: _l.protocol + '//' + _l.host + "/ananas/status/" + objectId + '?k=' + fid + '&flag=normal&_dc=' + String(Math.round(new Date())),
@@ -258,29 +274,39 @@ function missonVideo(dom, obj) {
                     clipTime = '0_' + duration,
                     playingTime = 0,
                     isdrag = 0;
-                updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag)
-                logger("视频：" + res['filename'] + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
+                if (setting.rate == 0) {
+                    logger('已开启视频秒过，可能会导致进度重置、挂科等问题。', 'red')
+                } else if (setting.rate > 1 && setting.rate <= 16) {
+                    logger('已开启视频倍速，当前倍速：' + setting.rate + ',可能会导致进度重置、挂科等问题。', 'red')
+                } else if (setting.rate > 16) {
+                    setting.rate = 1
+                    logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
+                }
+                logger("视频：" + name + "开始播放")
                 let _loop = setInterval(() => {
-                    playingTime += 40
-                    if (playingTime >= duration) {
+                    playingTime += 40 * setting.rate
+                    if (playingTime >= duration || setting.rate == 0) {
                         clearInterval(_loop)
                         playingTime = duration
                         isdrag = 4
                     }
-                    updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag)
-                    switch (GM_getValue("video_result")) {
-                        case 0:
-                            playingTime -= 40
-                            break
-                        case 1:
-                            logger("视频：" + res['filename'] + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
-                            break
-                        case 2:
-                            clearInterval(_loop)
-                            logger("视频：" + res['filename'] + "检测播放完毕，准备处理下一个任务。", 'green')
-                            switchMission()
-                            break
-                    }
+                    updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag).then((status) => {
+                        switch (status) {
+                            case 0:
+                                playingTime -= 40
+                                break
+                            case 1:
+                                logger("视频：" + res['filename'] + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
+                                break
+                            case 2:
+                                clearInterval(_loop)
+                                logger("视频：" + res['filename'] + "检测播放完毕，准备处理下一个任务。", 'green')
+                                switchMission()
+                                break
+                            default:
+                                console.log(status)
+                        }
+                    })
                 }, 40000)
             } catch (e) {
                 logger('发生错误：' + e, 'red')
@@ -356,22 +382,33 @@ function refreshCourseList() {
 }
 
 function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag) {
-    getEnc(classId, userId, jobId, objectId, playingTime, duration, clipTime).then((enc) => {
-        $.ajax({
-            url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=0.9&dtype=Video&_t=' + String(Math.round(new Date())),
-            type: 'GET',
-            success: function (res) {
-                try {
-                    if (res['isPassed']) {
-                        GM_setValue('video_result', 2)
-                    } else {
-                        GM_setValue('video_result', 1)
+    return new Promise((resolve, reject) => {
+        getEnc(classId, userId, jobId, objectId, playingTime, duration, clipTime).then((enc) => {
+            $.ajax({
+                url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=0.9&dtype=Video&_t=' + String(Math.round(new Date())),
+                type: 'GET',
+                success: function (res) {
+                    console.log(res)
+                    try {
+                        if (res['isPassed']) {
+                            if (setting.review && playingTime != duration) {
+                                resolve(1)
+                            } else {
+                                resolve(2)
+                            }
+                        } else {
+                            if (setting.rate == 0 && playingTime == duration) {
+                                resolve(2)
+                            } else {
+                                resolve(1)
+                            }
+                        }
+                    } catch (e) {
+                        logger('发生错误：' + e, 'red')
+                        resolve(0)
                     }
-                } catch (e) {
-                    logger('发生错误：' + e, 'red')
-                    GM_setValue('video_result', 0)
                 }
-            }
+            })
         })
     })
 }
@@ -474,7 +511,7 @@ function doWork(dom) {
 function resolveCallback(args) {
     console.log(args)
     if (args == undefined) {
-        if (sub) {
+        if (setting.sub) {
             logger('测验处理完成，准备自动提交。', 'green')
             setTimeout(() => {
                 $subBtn.click()
@@ -497,7 +534,7 @@ function resolveCallback(args) {
 
 function rejectCallback(args) {
     if (args['c'] == 0) {
-        sub = 0
+        setting.sub = 0
         setTimeout(() => { resloveCallback(args) }, 5000)
     } else {
         getAnswer(args['index'], args['TiMuList']).then((args) => {
@@ -525,11 +562,11 @@ function getAnswer(index, TiMuList) {
                         var obj = $.parseJSON(xhr.responseText) || {},
                             _answer = obj.data;
                         if (obj.code) {
-                            logger('题目：' + _question + " | 答案：" + _answer, 'purple')
+                            logger('题目' + (index + 1) + '：' + _question + " | 答案：" + _answer, 'purple')
                             fillAnswer(TiMuList[index], { index, _TimuType, _answer })
                             resolve({ index, TiMuList })
                         } else {
-                            logger('题目：' + _question + "暂无答案", 'purple')
+                            logger('题目' + (index + 1) + '：' + _question + "暂无答案", 'purple')
                             reject({ index, 'c': 0, TiMuList })
                         }
                     } else if (xhr.status == 403) {
@@ -565,7 +602,7 @@ function fillAnswer(dom, obj) {
                 _a.push(tidyStr($(t).html()))
             })
             let _i = _a.findIndex((item) => item == obj['_answer'])
-            if (_i == -1) { return sub = 0 }
+            if (_i == -1) { return setting.sub = 0 }
             $(_answerTmpArr[_i]).parent().find('input').attr('checked', 'checked')
             break
         case 1:
@@ -579,7 +616,7 @@ function fillAnswer(dom, obj) {
                 }
             })
             let id = getStr($(dom).find('.Zy_ulTop li:nth-child(1)').attr('onclick'), 'addcheck(', ');').replace('(', '').replace(')', '')
-            if (_a.length <= 0) { return sub = 0 }
+            if (_a.length <= 0) { return setting.sub = 0 }
             $(dom).find('.Zy_ulTop').parent().find('#answer' + id).val(_a.join(""))
             break
         case 2:
@@ -601,7 +638,7 @@ function fillAnswer(dom, obj) {
             } else if (_false.indexOf(obj['_answer']) != -1) {
                 $(dom).find('.Zy_ulBottom li').find('.wr').parent().find('input').attr('checked', 'checked')
             } else {
-                return sub = 0
+                return setting.sub = 0
             }
             break
     }
