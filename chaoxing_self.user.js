@@ -55,6 +55,9 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
         _domList = $('#iframe').contents().find('.ans-attach-ct')
         missonStart()
     }
+} else if (_l.pathname == '/exam/test/reVersionTestStartNew') {
+    showBox()
+    missonExam()
 } else {
     console.log(_l.pathname)
 }
@@ -366,6 +369,125 @@ function missonWork(dom, obj) {
     }
 }
 
+function missonExam() {
+    let $_examtable = $('.mark_table').find('.whiteDiv')
+    let _questionFull = tidyStr($_examtable.find('h3.mark_name').html().trim())
+    let _qType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[_questionFull.match(/[(](.*?),.*?分[)]|$/)[1]]
+    let _question = tidyStr(_questionFull.replace(/[(].*?分[)]/, '').replace(/^\s*/, ''))
+    let $_ansdom = $_examtable.find('#submitTest').find('.stem_answer')
+    let _answerTmpArr;
+    let _a = []
+    switch (_qType) {
+        case 0:
+            _answerTmpArr = $_ansdom.find('.clearfix.answerBg .fl.answer_p')
+            getExamAnswer(_qType, _question).then((agrs) => {
+                $.each(_answerTmpArr, (i, t) => {
+                    _a.push(tidyStr($(t).html()))
+                })
+                let _i = _a.findIndex((item) => item == agrs)
+                if (_i == -1) {
+                    logger('未匹配到正确答案，跳过此题', 'red')
+                    setTimeout(toNextExam, 5000)
+                } else {
+                    setTimeout(() => {
+                        if ($(_answerTmpArr[_i]).parent().find('span').attr('class').indexOf('check_answer') == -1) {
+                            $(_answerTmpArr[_i]).parent().click()
+                            logger('自动答题成功，准备切换下一题', 'green')
+                            toNextExam()
+                        } else {
+                            logger('此题已作答，准备切换下一题', 'green')
+                            toNextExam()
+                        }
+                    }, 300)
+                }
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    toNextExam()
+                }
+            })
+            break
+        case 1:
+            _answerTmpArr = $_ansdom.find('.clearfix.answerBg .fl.answer_p')
+            getExamAnswer(_qType, _question).then((agrs) => {
+                if ($_ansdom.find('.clearfix.answerBg span.check_answer_dx').length > 0) {
+                    logger('此题已作答，准备切换下一题', 'green')
+                    toNextExam()
+                } else {
+                    $.each(_answerTmpArr, (i, t) => {
+                        if (agrs.indexOf(tidyStr($(t).html())) != -1) {
+                            setTimeout(() => { $(_answerTmpArr[i]).parent().click() }, 300)
+                        }
+                    })
+                    logger('自动答题成功，准备切换下一题', 'green')
+                    toNextExam()
+                }
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    toNextExam()
+                }
+            })
+            break
+        case 2:
+            break
+        case 3:
+            break
+        default:
+            break
+    }
+}
+
+function toNextExam() {
+    let $_examtable = $('.mark_table').find('.whiteDiv')
+    let $nextbtn = $_examtable.find('.nextDiv a')
+    setTimeout(() => {
+        $nextbtn.click()
+    }, 5000)
+}
+
+
+function getExamAnswer(_type, _question) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: _host + '/index.php/cxapi/cxtimu/getanswer?v=2',
+            headers: {
+                'Content-type': 'application/x-www-form-urlencoded',
+            },
+            data: 'question=' + encodeURIComponent(_question),
+            timeout: 5000,
+            onload: function (xhr) {
+                if (xhr.status == 200) {
+                    var obj = $.parseJSON(xhr.responseText) || {},
+                        _answer = obj.data;
+                    if (obj.code) {
+                        logger('题目：' + _question + " | 答案：" + _answer, 'purple')
+                        resolve(_answer)
+                    } else {
+                        logger('题目：' + _question + "暂无答案", 'purple')
+                        reject({ 'c': 0 })
+                    }
+                } else if (xhr.status == 403) {
+                    logger('请求过于频繁，请稍后再试', 'red')
+                    reject({ 'c': 403 })
+                } else if (xhr.status == 500) {
+                    logger('题库程序异常,请过一会再试', 'red')
+                    reject({ 'c': 500 })
+                } else if (xhr.status == 444) {
+                    logger('IP异常，已被拉入服务器黑名单，请过几个小时再试', 'red')
+                    reject({ 'c': 444 })
+                } else {
+                    logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
+                    reject({ 'c': 555 })
+                }
+            },
+            ontimeout: function () {
+                logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
+                reject({ 'c': 666 })
+            }
+        });
+    })
+}
+
 function refreshCourseList() {
     let _p = parseUrlParams()
     return new Promise((resolve, reject) => {
@@ -535,7 +657,7 @@ function resolveCallback(args) {
 function rejectCallback(args) {
     if (args['c'] == 0) {
         setting.sub = 0
-        setTimeout(() => { resloveCallback(args) }, 5000)
+        setTimeout(() => { resolveCallback(args) }, 5000)
     } else {
         getAnswer(args['index'], args['TiMuList']).then((args) => {
             setTimeout(() => { resolveCallback(args) }, 5000)
