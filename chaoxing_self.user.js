@@ -264,7 +264,7 @@ function missonVideo(dom, obj) {
         logger('视频：' + name + '检测已完成，准备处理下一个任务', 'green')
         switchMission()
         return
-    } else {
+    } else if (setting.review) {
         logger('已开启复习模式，开始处理视频：' + name, 'pink')
     }
     $.ajax({
