@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
 // @namespace           nawlgzs@gmail.com
-// @version             1.1
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此600行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：视频倍速\秒过、文档秒过、答题、收录答案。未来：作业、考试
+// @version             1.2
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：新版考试、视频倍速\秒过、文档秒过、答题、收录答案。未来：作业
 // @author              Ne-21
 // @match               *://*chaoxing.com*
 // @connect             api.gocos.cn
@@ -27,8 +27,8 @@ var _w = unsafeWindow,
     _l = location,
     _d = _w.document,
     $ = _w.jQuery || top.jQuery,
+    UE = _w.UE,
     _host = "https://api.gocos.cn";
-
 
 var _mlist, _defaults, _domList, _video, $subBtn, $saveBtn, $frame_c;
 
@@ -55,6 +55,9 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
         _domList = $('#iframe').contents().find('.ans-attach-ct')
         missonStart()
     }
+} else if (_l.pathname == '/exam/test/reVersionTestStartNew') {
+    showBox()
+    setTimeout(() => { missonExam() }, 3000)
 } else {
     console.log(_l.pathname)
 }
@@ -366,6 +369,166 @@ function missonWork(dom, obj) {
     }
 }
 
+function missonExam() {
+    let $_examtable = $('.mark_table').find('.whiteDiv')
+    let _questionFull = tidyStr($_examtable.find('h3.mark_name').html().trim())
+    let _qType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[_questionFull.match(/[(](.*?),.*?分[)]|$/)[1]]
+    let _question = tidyStr(_questionFull.replace(/[(].*?分[)]/, '').replace(/^\s*/, ''))
+    let $_ansdom = $_examtable.find('#submitTest').find('.stem_answer')
+    let _answerTmpArr;
+    let _a = []
+    switch (_qType) {
+        case 0:
+            _answerTmpArr = $_ansdom.find('.clearfix.answerBg .fl.answer_p')
+            getExamAnswer(_qType, _question).then((agrs) => {
+                $.each(_answerTmpArr, (i, t) => {
+                    _a.push(tidyStr($(t).html()))
+                })
+                let _i = _a.findIndex((item) => item == agrs)
+                if (_i == -1) {
+                    logger('未匹配到正确答案，跳过此题', 'red')
+                    setTimeout(toNextExam, 5000)
+                } else {
+                    setTimeout(() => {
+                        if ($(_answerTmpArr[_i]).parent().find('span').attr('class').indexOf('check_answer') == -1) {
+                            $(_answerTmpArr[_i]).parent().click()
+                            logger('自动答题成功，准备切换下一题', 'green')
+                            toNextExam()
+                        } else {
+                            logger('此题已作答，准备切换下一题', 'green')
+                            toNextExam()
+                        }
+                    }, 300)
+                }
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    toNextExam()
+                }
+            })
+            break
+        case 1:
+            _answerTmpArr = $_ansdom.find('.clearfix.answerBg .fl.answer_p')
+            getExamAnswer(_qType, _question).then((agrs) => {
+                if ($_ansdom.find('.clearfix.answerBg span.check_answer_dx').length > 0) {
+                    logger('此题已作答，准备切换下一题', 'green')
+                    toNextExam()
+                } else {
+                    $.each(_answerTmpArr, (i, t) => {
+                        if (agrs.indexOf(tidyStr($(t).html())) != -1) {
+                            setTimeout(() => { $(_answerTmpArr[i]).parent().click() }, 300)
+                        }
+                    })
+                    logger('自动答题成功，准备切换下一题', 'green')
+                    toNextExam()
+                }
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    toNextExam()
+                }
+            })
+            break
+        case 2:
+            let _textareaList = $_ansdom.find('.Answer .divText .subEditor textarea')
+            getExamAnswer(_qType, _question).then((agrs) => {
+                let _answerTmpArr = agrs.split('#')
+                $.each(_textareaList, (i, t) => {
+                    let _id = $(t).attr('id')
+                    setTimeout(() => { UE.getEditor(_id).setContent(_answerTmpArr[i]) }, 300)
+                })
+                logger('自动答题成功，准备切换下一题', 'green')
+                toNextExam()
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    toNextExam()
+                }
+            })
+            break
+        case 3:
+            console.log('判断题')
+            let _true = '正确|是|对|√|T|ri'
+            let _false = '错误|否|错|×|F|wr'
+            let _i = 0
+            _answerTmpArr = $_ansdom.find('.clearfix.answerBg .fl.answer_p')
+            $.each(_answerTmpArr, (i, t) => {
+                _a.push($(t).text().trim())
+            })
+            getExamAnswer(_qType, _question).then((agrs) => {
+                if (_true.indexOf(agrs) != -1) {
+                    _i = _a.findIndex((item) => _true.indexOf(item) != -1)
+                } else if (_false.indexOf(agrs) != -1) {
+                    _i = _a.findIndex((item) => _false.indexOf(item) != -1)
+                } else {
+                    logger('答案匹配出错，准备切换下一题', 'green')
+                    toNextExam()
+                    return
+                }
+                if ($(_answerTmpArr[_i]).parent().find('span').attr('class').indexOf('check_answer') == -1) {
+                    setTimeout(() => { $(_answerTmpArr[_i]).parent().click() }, 300)
+                    logger('自动答题成功，准备切换下一题', 'green')
+                    toNextExam()
+                } else {
+                    logger('此题已作答，准备切换下一题', 'green')
+                    toNextExam()
+                }
+            })
+            break
+        default:
+            break
+    }
+}
+
+function toNextExam() {
+    let $_examtable = $('.mark_table').find('.whiteDiv')
+    let $nextbtn = $_examtable.find('.nextDiv a')
+    setTimeout(() => {
+        $nextbtn.click()
+    }, 2000)
+}
+
+
+function getExamAnswer(_type, _question) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: _host + '/index.php/cxapi/cxtimu/getanswer?v=2',
+            headers: {
+                'Content-type': 'application/x-www-form-urlencoded',
+            },
+            data: 'question=' + encodeURIComponent(_question),
+            timeout: 5000,
+            onload: function (xhr) {
+                if (xhr.status == 200) {
+                    var obj = $.parseJSON(xhr.responseText) || {},
+                        _answer = obj.data;
+                    if (obj.code) {
+                        logger('题目：' + _question + " | 答案：" + _answer, 'purple')
+                        resolve(_answer)
+                    } else {
+                        logger('题目：' + _question + "暂无答案", 'purple')
+                        reject({ 'c': 0 })
+                    }
+                } else if (xhr.status == 403) {
+                    logger('请求过于频繁，请稍后再试', 'red')
+                    reject({ 'c': 403 })
+                } else if (xhr.status == 500) {
+                    logger('题库程序异常,请过一会再试', 'red')
+                    reject({ 'c': 500 })
+                } else if (xhr.status == 444) {
+                    logger('IP异常，已被拉入服务器黑名单，请过几个小时再试', 'red')
+                    reject({ 'c': 444 })
+                } else {
+                    logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
+                    reject({ 'c': 555 })
+                }
+            },
+            ontimeout: function () {
+                logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
+                reject({ 'c': 666 })
+            }
+        });
+    })
+}
+
 function refreshCourseList() {
     let _p = parseUrlParams()
     return new Promise((resolve, reject) => {
@@ -535,7 +698,7 @@ function resolveCallback(args) {
 function rejectCallback(args) {
     if (args['c'] == 0) {
         setting.sub = 0
-        setTimeout(() => { resloveCallback(args) }, 5000)
+        setTimeout(() => { resolveCallback(args) }, 5000)
     } else {
         getAnswer(args['index'], args['TiMuList']).then((args) => {
             setTimeout(() => { resolveCallback(args) }, 5000)
@@ -625,7 +788,7 @@ function fillAnswer(dom, obj) {
             $.each(_textareaList, (i, t) => {
                 setTimeout(() => {
                     $(t).find('#ueditor_' + i).contents().find('.view p').html(_answerList[i]);
-                    $(t).find('textarea').html(_answerList[i])
+                    $(t).find('textarea').html('<p>' + _answerList[i] + '</p>')
                 }, 300)
             })
             break
