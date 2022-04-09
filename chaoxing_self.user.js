@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
 // @namespace           nawlgzs@gmail.com
-// @version             1.2.1
+// @version             1.2.2
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：新版考试、视频倍速\秒过、文档秒过、答题、收录答案。未来：作业
 // @author              Ne-21
 // @match               *://*chaoxing.com*
@@ -18,9 +18,11 @@
 // ==/UserScript==
 
 var setting = {
-    rate: 1, // 视频倍速，0为秒过，1为正常速率，最高16倍
-    review: 0, // 复习模式，0为关闭，1为开启可以补挂视频时长
-    sub: 1, // 测验自动提交设置，0为关闭,1为开启,关闭会自动保存答案
+    rate: 1,    // 视频倍速，0为秒过，1为正常速率，最高16倍
+    review: 0,  // 复习模式，0为关闭，1为开启可以补挂视频时长
+    work: 1,    // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
+    sub: 1,     // 测验自动提交，0为关闭,1为开启，当没答案时测验将不会提交，如需提交请设置force：1
+    force: 0,   // 测验强制提交，0为关闭，1为开启，开启此功能将会强制提交测验（无论作答与否）
 }
 
 var _w = unsafeWindow,
@@ -30,7 +32,7 @@ var _w = unsafeWindow,
     UE = _w.UE,
     _host = "https://api.gocos.cn";
 
-var _mlist, _defaults, _domList, _video, $subBtn, $saveBtn, $frame_c;
+var _mlist, _defaults, _domList, $subBtn, $saveBtn, $frame_c;
 
 if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     showTips();
@@ -355,18 +357,28 @@ function missonBook(dom, obj) {
 }
 
 function missonWork(dom, obj) {
-    let workIframe = $(dom).find('iframe').contents().find('iframe')
-    if (workIframe.length == 0) { return setTimeout(() => { logger('等待测验框架加载...', 'purple'); missonWork(dom, obj) }, 5000) }
-    let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span').text().trim()
-    if (workStatus == "已完成") {
-        logger('检测到此测验已完成，准备收录答案。', 'green')
-        upLoadWork(workIframe)
-    } else if (workStatus == "待做") {
-        logger('准备处理此测验...', 'purple')
-        doWork(workIframe)
-    } else {
-        console.log('rrrrr')
+    if (!setting.work) {
+        logger('用户设置不自动处理测验，准备处理下一个任务', 'green')
+        switchMission()
+        return
     }
+    let workIframe = $(dom).find('iframe').contents().find('iframe')
+    $(workIframe).ready(() => {
+        logger('等待测验框架加载...', 'purple')
+        if (workIframe.length == 0) { return setTimeout(() => { missonWork(dom, obj) }, 3000) }
+        let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span:nth-child(1)').text().trim()
+        if (workStatus.indexOf("已完成") != -1) {
+            logger('检测到此测验已完成，准备收录答案。', 'green')
+            upLoadWork(workIframe)
+        } else if (workStatus.indexOf("待做") != -1) {
+            logger('准备处理此测验...', 'purple')
+            doWork(workIframe)
+        } else if (workStatus.indexOf('待批阅') != -1) {
+            switchMission()
+        } else {
+            return setTimeout(() => { missonWork(dom, obj) }, 3000)
+        }
+    })
 }
 
 function missonExam() {
@@ -444,7 +456,6 @@ function missonExam() {
             })
             break
         case 3:
-            console.log('判断题')
             let _true = '正确|是|对|√|T|ri'
             let _false = '错误|否|错|×|F|wr'
             let _i = 0
@@ -672,7 +683,6 @@ function doWork(dom) {
 }
 
 function resolveCallback(args) {
-    console.log(args)
     if (args == undefined) {
         if (setting.sub) {
             logger('测验处理完成，准备自动提交。', 'green')
@@ -680,15 +690,22 @@ function resolveCallback(args) {
                 $subBtn.click()
                 setTimeout(() => {
                     $frame_c.find('#confirmSubWin > div > div > a.bluebtn').click()
+                    logger('提交成功，准备切换下一个任务。', 'green')
+                    switchMission()
+                }, 3000)
+            }, 5000)
+        } else if (setting.force) {
+            logger('测验处理完成，存在无答案题目,由于用户设置了强制提交，准备自动提交。', 'red')
+            setTimeout(() => {
+                $subBtn.click()
+                setTimeout(() => {
+                    $frame_c.find('#confirmSubWin > div > div > a.bluebtn').click()
+                    logger('提交成功，准备切换下一个任务。', 'green')
                     switchMission()
                 }, 3000)
             }, 5000)
         } else {
-            logger('测验处理完成，存在无答案题目或用户选择不自动提交，保存答案。', 'green')
-            setTimeout(() => {
-                $saveBtn.click()
-                switchMission()
-            }, 5000)
+            logger('测验处理完成，存在无答案题目或用户设置不自动提交。', 'green')
         }
     } else {
         getAnswer(args['index'] + 1, args['TiMuList']).then((args) => {
