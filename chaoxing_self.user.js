@@ -27,8 +27,8 @@ var _w = unsafeWindow,
     _l = location,
     _d = _w.document,
     $ = _w.jQuery || top.jQuery,
+    UE = _w.UE,
     _host = "https://api.gocos.cn";
-
 
 var _mlist, _defaults, _domList, _video, $subBtn, $saveBtn, $frame_c;
 
@@ -57,7 +57,7 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     }
 } else if (_l.pathname == '/exam/test/reVersionTestStartNew') {
     showBox()
-    missonExam()
+    setTimeout(() => { missonExam() }, 3000)
 } else {
     console.log(_l.pathname)
 }
@@ -428,8 +428,49 @@ function missonExam() {
             })
             break
         case 2:
+            let _textareaList = $_ansdom.find('.Answer .divText .subEditor textarea')
+            getExamAnswer(_qType, _question).then((agrs) => {
+                let _answerTmpArr = agrs.split('#')
+                $.each(_textareaList, (i, t) => {
+                    let _id = $(t).attr('id')
+                    setTimeout(() => { UE.getEditor(_id).setContent(_answerTmpArr[i]) }, 300)
+                })
+                logger('自动答题成功，准备切换下一题', 'green')
+                toNextExam()
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    toNextExam()
+                }
+            })
             break
         case 3:
+            console.log('判断题')
+            let _true = '正确|是|对|√|T|ri'
+            let _false = '错误|否|错|×|F|wr'
+            let _i = 0
+            _answerTmpArr = $_ansdom.find('.clearfix.answerBg .fl.answer_p')
+            $.each(_answerTmpArr, (i, t) => {
+                _a.push($(t).text().trim())
+            })
+            getExamAnswer(_qType, _question).then((agrs) => {
+                if (_true.indexOf(agrs) != -1) {
+                    _i = _a.findIndex((item) => _true.indexOf(item) != -1)
+                } else if (_false.indexOf(agrs) != -1) {
+                    _i = _a.findIndex((item) => _false.indexOf(item) != -1)
+                } else {
+                    logger('答案匹配出错，准备切换下一题', 'green')
+                    toNextExam()
+                    return
+                }
+                if ($(_answerTmpArr[_i]).parent().find('span').attr('class').indexOf('check_answer') == -1) {
+                    setTimeout(() => { $(_answerTmpArr[_i]).parent().click() }, 300)
+                    logger('自动答题成功，准备切换下一题', 'green')
+                    toNextExam()
+                } else {
+                    logger('此题已作答，准备切换下一题', 'green')
+                    toNextExam()
+                }
+            })
             break
         default:
             break
@@ -441,7 +482,7 @@ function toNextExam() {
     let $nextbtn = $_examtable.find('.nextDiv a')
     setTimeout(() => {
         $nextbtn.click()
-    }, 5000)
+    }, 2000)
 }
 
 
@@ -747,7 +788,7 @@ function fillAnswer(dom, obj) {
             $.each(_textareaList, (i, t) => {
                 setTimeout(() => {
                     $(t).find('#ueditor_' + i).contents().find('.view p').html(_answerList[i]);
-                    $(t).find('textarea').html(_answerList[i])
+                    $(t).find('textarea').html('<p>' + _answerList[i] + '</p>')
                 }, 300)
             })
             break
