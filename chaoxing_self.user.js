@@ -680,12 +680,14 @@ function resolveCallback(args) {
                 $subBtn.click()
                 setTimeout(() => {
                     $frame_c.find('#confirmSubWin > div > div > a.bluebtn').click()
+                    switchMission()
                 }, 3000)
             }, 5000)
         } else {
             logger('测验处理完成，存在无答案题目或用户选择不自动提交，保存答案。', 'green')
             setTimeout(() => {
                 $saveBtn.click()
+                switchMission()
             }, 5000)
         }
     } else {
@@ -820,3 +822,4 @@ function tidyStr(str) {
         str = str.replace('【' + type + '】', '').replace(/&nbsp;/g, ' ');
     return str
 }
+
