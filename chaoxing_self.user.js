@@ -49,6 +49,7 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     let cur_title = $('#mainid > div.prev_title_pos > div').text()
     logger('当前页面：' + cur_title, 'black')
     var params = getTaskParams()
+    console.log(params)
     if (params == null || params == '$mArg' || $.parseJSON(params)['attachments'].length <= 0) {
         logger('无任务点可处理，即将跳转页面', 'red')
         toNext()
@@ -247,6 +248,10 @@ function missonStart() {
             logger('开始处理文档', 'purple')
             missonDoucument(_dom, _task)
             break
+        case "read":
+            logger('开始处理阅读', 'purple')
+            missonBook(_dom, _task)
+            break
         default:
             logger('暂不支持处理此类型:' + _type, 'red')
     }
@@ -353,7 +358,30 @@ function missonDoucument(dom, obj) {
 }
 
 function missonBook(dom, obj) {
-
+    let jobId = obj['property']['jobid'],
+        name = obj['property']['title'],
+        jtoken = obj['jtoken'],
+        knowledgeId = _defaults['knowledgeid'],
+        courseId = _defaults['courseid'],
+        clazzId = _defaults['clazzId'];
+    if (obj['job'] == undefined) {
+        logger('阅读：' + name + ',检测已完成，准备执行下一个任务。', 'green')
+        switchMission()
+        return
+    }
+    $.ajax({
+        url: _l.protocol + '//' + _l.host + '/ananas/job/readv2?jobid=' + jobId + '&knowledgeid=' + knowledgeId + '&courseid=' + courseId + '&clazzid=' + clazzId + '&jtoken=' + jtoken + '&_dc=' + String(Math.round(new Date())),
+        method:'GET',
+        success: function (res) {
+            if (res.status) {
+                logger('阅读：' + name + res.msg + ',准备执行下一个任务。', 'green')
+            } else {
+                logger('阅读：' + name + '处理异常,跳过。', 'red')
+            }
+            switchMission()
+            return
+        }
+    })
 }
 
 function missonWork(dom, obj) {
