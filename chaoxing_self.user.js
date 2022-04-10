@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
 // @namespace           nawlgzs@gmail.com
-// @version             1.2.3
+// @version             1.2.4
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：新版考试、视频倍速\秒过、文档秒过、答题、收录答案。未来：作业
 // @author              Ne-21
 // @match               *://*chaoxing.com*
@@ -836,7 +836,7 @@ function tidyStr(str) {
     str = str.replace(/<(?!img).*?>/g, ""),
         type = str.match(/^【(.*?)】|$/)[1],
         str = str.replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, ''),
-        str = str.replace('【' + type + '】', '').replace(/(^\s*)/, '');
+        str = str.replace('【' + type + '】', '').replace('&nbsp;', ' ')
     return str
 }
 
