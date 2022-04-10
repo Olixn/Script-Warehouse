@@ -4,7 +4,7 @@
 // @version             1.2.5
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：新版考试、视频倍速\秒过、文档秒过、答题、收录答案。未来：作业
 // @author              Ne-21
-// @match               *://*chaoxing.com*
+// @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
 // @match               *://*.nbdlib.cn/*
 // @match               *://*.hnsyu.net/*
