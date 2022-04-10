@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
 // @namespace           nawlgzs@gmail.com
-// @version             1.2.2
+// @version             1.2.3
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：新版考试、视频倍速\秒过、文档秒过、答题、收录答案。未来：作业
 // @author              Ne-21
 // @match               *://*chaoxing.com*
@@ -45,6 +45,7 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     if ($("html").html().indexOf("章节未开放！") != -1 && _l.href.indexOf("ut=s") != -1) {
         _l.href = _l.href.replace("ut=s", "ut=t");
     }
+    $('#ne-21log').html('')
     let cur_title = $('#mainid > div.prev_title_pos > div').text()
     logger('当前页面：' + cur_title, 'black')
     var params = getTaskParams()
@@ -55,7 +56,7 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
         _mlist = $.parseJSON(params)['attachments']
         _defaults = $.parseJSON(params)['defaults']
         _domList = $('#iframe').contents().find('.ans-attach-ct')
-        missonStart()
+        setTimeout(() => { missonStart() }, 3000)
     }
 } else if (_l.pathname == '/exam/test/reVersionTestStartNew') {
     showBox()
@@ -206,7 +207,6 @@ function toNext() {
             }
             let t = _t[_curIndex + 1]
             if (t['status'].indexOf('待完成') != -1) {
-                $('#ne-21log').html('')
                 setTimeout(() => {
                     $('#mainid > .prev_next.next').click()
                     showBox()
@@ -836,7 +836,7 @@ function tidyStr(str) {
     str = str.replace(/<(?!img).*?>/g, ""),
         type = str.match(/^【(.*?)】|$/)[1],
         str = str.replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, ''),
-        str = str.replace('【' + type + '】', '').replace(/&nbsp;/g, ' ');
+        str = str.replace('【' + type + '】', '').replace(/(^\s*)/, '');
     return str
 }
 
