@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
 // @namespace           nawlgzs@gmail.com
-// @version             1.2.6
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：新版考试、视频倍速\秒过、文档秒过、答题、收录答案。未来：作业
+// @version             1.2.7
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业。未来：收录作业答案
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
@@ -64,6 +64,9 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
 } else if (_l.pathname == '/exam/test/reVersionTestStartNew') {
     showBox()
     setTimeout(() => { missonExam() }, 3000)
+} else if (_l.pathname == '/mooc2/work/dowork') {
+    showBox()
+    setTimeout(() => { missonHomeWork() }, 3000)
 } else {
     console.log(_l.pathname)
 }
@@ -255,7 +258,8 @@ function missonStart() {
             missonBook(_dom, _task)
             break
         default:
-            logger('暂不支持处理此类型:' + _type, 'red')
+            logger('暂不支持处理此类型:' + _type + '，跳过。', 'red')
+            switchMission()
     }
 }
 
@@ -373,7 +377,7 @@ function missonBook(dom, obj) {
     }
     $.ajax({
         url: _l.protocol + '//' + _l.host + '/ananas/job/readv2?jobid=' + jobId + '&knowledgeid=' + knowledgeId + '&courseid=' + courseId + '&clazzid=' + clazzId + '&jtoken=' + jtoken + '&_dc=' + String(Math.round(new Date())),
-        method:'GET',
+        method: 'GET',
         success: function (res) {
             if (res.status) {
                 logger('阅读：' + name + res.msg + ',准备执行下一个任务。', 'green')
@@ -409,6 +413,108 @@ function missonWork(dom, obj) {
             return setTimeout(() => { missonWork(dom, obj) }, 3000)
         }
     })
+}
+
+function missonHomeWork() {
+    logger('开始处理作业', 'green')
+    let $_homeworktable = $('.mark_table').find('form')
+    let TimuList = $_homeworktable.find('.questionLi')
+    doHomeWork(0, TimuList)
+}
+
+function doHomeWork(index, TiMuList) {
+    if (index == TiMuList.length) {
+        logger('作业题目已全部完成', 'green')
+        return
+    }
+    let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[$(TiMuList[index]).attr('typename')]
+    let _questionFull = $(TiMuList[index]).find('.mark_name').html()
+    let _question = tidyStr(_questionFull).replace(/[(].*?[)]/, '').trim()
+    let _a = []
+    let _answerTmpArr
+    switch (_type) {
+        case 0:
+            _answerTmpArr = $(TiMuList[index]).find('.stem_answer').find('.answer_p')
+            getExamAnswer(_type, _question).then((agrs) => {
+                $.each(_answerTmpArr, (i, t) => {
+                    _a.push(tidyStr($(t).html()))
+                })
+                let _i = _a.findIndex((item) => item == agrs)
+                if (_i == -1) {
+                    logger('未匹配到正确答案，跳过此题', 'red')
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                } else {
+                    setTimeout(() => {
+                        $(_answerTmpArr[_i]).parent().click()
+                        logger('自动答题成功，准备切换下一题', 'green')
+                        setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                    }, 300)
+                }
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                }
+            })
+            break
+        case 1:
+            _answerTmpArr = $(TiMuList[index]).find('.stem_answer').find('.answer_p')
+            getExamAnswer(_type, _question).then((agrs) => {
+                $.each(_answerTmpArr, (i, t) => {
+                    if (agrs.indexOf(tidyStr($(t).html())) != -1) {
+                        setTimeout(() => { $(_answerTmpArr[i]).parent().click() }, 300)
+                    }
+                })
+                logger('自动答题成功，准备切换下一题', 'green')
+                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                }
+            })
+            break
+        case 2:
+            let _textareaList = $(TiMuList[index]).find('.stem_answer').find('.Answer .divText .textDIV textarea')
+            getExamAnswer(_type, _question).then((agrs) => {
+                let _answerTmpArr = agrs.split('#')
+                $.each(_textareaList, (i, t) => {
+                    let _id = $(t).attr('id')
+                    setTimeout(() => { UE.getEditor(_id).setContent(_answerTmpArr[i]) }, 300)
+                })
+                logger('自动答题成功，准备切换下一题', 'green')
+                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                }
+            })
+            break
+        case 3:
+            let _true = '正确|是|对|√|T|ri'
+            let _false = '错误|否|错|×|F|wr'
+            let _i = 0
+            _answerTmpArr = $(TiMuList[index]).find('.stem_answer').find('.answer_p')
+            $.each(_answerTmpArr, (i, t) => {
+                _a.push($(t).text().trim())
+            })
+            getExamAnswer(_qType, _question).then((agrs) => {
+                if (_true.indexOf(agrs) != -1) {
+                    _i = _a.findIndex((item) => _true.indexOf(item) != -1)
+                } else if (_false.indexOf(agrs) != -1) {
+                    _i = _a.findIndex((item) => _false.indexOf(item) != -1)
+                } else {
+                    logger('答案匹配出错，准备切换下一题', 'green')
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                    return
+                }
+                setTimeout(() => { $(_answerTmpArr[_i]).parent().click() }, 300)
+                logger('自动答题成功，准备切换下一题', 'green')
+                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+            })
+            break
+        default:
+            logger('暂不支持处理此题型：' + $(TiMuList[index]).attr('typename') + ',跳过。', 'red')
+            setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+    }
 }
 
 function missonExam() {
