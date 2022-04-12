@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
 // @namespace           nawlgzs@gmail.com
-// @version             1.2.7
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业。未来：收录作业答案
+// @version             1.2.8
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业。未来：收录作业答案
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
@@ -21,6 +21,7 @@
 // ==/UserScript==
 
 var setting = {
+    video: 1,   // 处理视频，0为关闭，1为开启
     rate: 1,    // 视频倍速，0为秒过，1为正常速率，最高16倍
     review: 0,  // 复习模式，0为关闭，1为开启可以补挂视频时长
     work: 1,    // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
@@ -264,6 +265,11 @@ function missonStart() {
 }
 
 function missonVideo(dom, obj) {
+    if (!setting.video) {
+        logger('用户设置不处理视频任务，准备开始下一个任务。', 'red')
+        setTimeout(() => { switchMission() }, 3000)
+        return
+    }
     let classId = _defaults['clazzId'],
         userId = _defaults['userid'],
         fid = _defaults['fid'],
@@ -970,9 +976,8 @@ function switchMission() {
 
 function tidyStr(str) {
     str = str.replace(/<(?!img).*?>/g, ""),
-        type = str.match(/^【(.*?)】|$/)[1],
-        str = str.replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, ''),
-        str = str.replace('【' + type + '】', '').replace('&nbsp;', ' ')
+        str = str.replace(/^【.*?】\s*/, '').replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, '')
+    str = str.trim()
     return str
 }
 
