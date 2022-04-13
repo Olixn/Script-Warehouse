@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
 // @namespace           nawlgzs@gmail.com
-// @version             1.2.8
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业。未来：收录作业答案
+// @version             1.2.9
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
@@ -68,6 +68,9 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
 } else if (_l.pathname == '/mooc2/work/dowork') {
     showBox()
     setTimeout(() => { missonHomeWork() }, 3000)
+} else if (_l.pathname == '/mooc2/work/view') {
+    showBox()
+    setTimeout(() => { uploadHomeWork() }, 3000)
 } else {
     console.log(_l.pathname)
 }
@@ -435,7 +438,8 @@ function doHomeWork(index, TiMuList) {
     }
     let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[$(TiMuList[index]).attr('typename')]
     let _questionFull = $(TiMuList[index]).find('.mark_name').html()
-    let _question = tidyStr(_questionFull).replace(/[(].*?[)]/, '').trim()
+    let _question = tidyStr(_questionFull).replace(/^[(].*?[)]/, '').trim()
+    console.log(_question)
     let _a = []
     let _answerTmpArr
     switch (_type) {
@@ -810,6 +814,116 @@ function upLoadWork(dom) {
     })
 }
 
+
+function uploadHomeWork() {
+    logger('开始收录答案', 'green')
+    let $_homeworktable = $('.mark_table')
+    let TiMuList = $_homeworktable.find('.mark_item').find('.questionLi')
+    let data = []
+    $.each(TiMuList, (i, t) => {
+        let _a = {}
+        let _answer
+        let _answerTmpArr, _answerList = []
+        let TiMuFull = tidyStr($(t).find('h3.mark_name').html())
+        let TiMuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[TiMuFull.match(/[(](.*?)[)]|$/)[1]]
+        let TiMu = TiMuFull.replace(/^[(].*?[)]|$/, '').trim()
+        let _rightAns = $(t).find('.mark_answer').find('.colorGreen').text().replace(/正确答案[:：]/, '').trim()
+        switch (TiMuType) {
+            case 0:
+                if (_rightAns.length <= 0) {
+                    _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
+                    if (_isTrue == 'marking_dui') {
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                    } else {
+                        return
+                    }
+                }
+                _answerTmpArr = $(t).find('.mark_letter li')
+                $.each(_answerTmpArr, (a, b) => {
+                    _answerList.push(tidyStr($(b).html()).replace(/[A-Z].\s*/, ''))
+                })
+                let _i = ({ A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 })[_rightAns]
+                _answer = _answerList[_i]
+                _a['question'] = TiMu
+                _a['type'] = TiMuType
+                _a['answer'] = _answer
+                data.push(_a)
+                break
+            case 1:
+                _answer = []
+                if (_rightAns.length <= 0) {
+                    _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
+                    if (_isTrue == 'marking_dui' || _isTrue == 'marking_bandui') {
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                    } else {
+                        return
+                    }
+                }
+                _answerTmpArr = $(t).find('.mark_letter li')
+                $.each(_answerTmpArr, (a, b) => {
+                    _answerList.push(tidyStr($(b).html()).replace(/[A-Z].\s*/, ''))
+                })
+                $.each(_rightAns.split(''), (c, d) => {
+                    let _i = ({ A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 })[d]
+                    _answer.push(_answerList[_i])
+                })
+                _a['question'] = TiMu
+                _a['type'] = TiMuType
+                _a['answer'] = _answer.join("#")
+                data.push(_a)
+                break
+            case 2:
+                _answer = []
+                if (_rightAns.length <= 0) {
+                    _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
+                    if (_isTrue == 'marking_dui' || _isTrue == 'marking_bandui') {
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                    } else {
+                        return
+                    }
+                }
+                break
+            case 3:
+                if (_rightAns.length <= 0) {
+                    _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
+                    if (_isTrue == 'marking_dui') {
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                    } else {
+                        let _true = '正确|是|对|√|T|ri'
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                        if (_true.indexOf(_rightAns) != -1) {
+                            _rightAns = '错'
+                        } else {
+                            _rightAns = '对'
+                        }
+                    }
+                }
+                _a['question'] = TiMu
+                _a['type'] = TiMuType
+                _a['answer'] = _rightAns
+                data.push(_a)
+                break
+        }
+    })
+    GM_xmlhttpRequest({
+        url: _host + '/index.php/cxapi/upload/newup',
+        data: 'data=' + JSON.stringify(data),
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        onload: function (xhr) {
+            let res = $.parseJSON(xhr.responseText)
+            if (res['code'] == 1) {
+                logger('答案收录成功！！准备处理下一个任务。', 'green')
+            } else {
+                logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
+            }
+        }
+    })
+}
+
+
 function doWork(dom) {
     let $CyHtml = $(dom).contents().find('.CeYan')
     let TiMuList = $CyHtml.find('.TiMu')
@@ -977,7 +1091,7 @@ function switchMission() {
 function tidyStr(str) {
     str = str.replace(/<(?!img).*?>/g, ""),
         str = str.replace(/^【.*?】\s*/, '').replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, '')
-    str = str.trim()
+    str = str.trim().replace(/&nbsp;/g, '').replace(/\s*/, '')
     return str
 }
 
