@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库
+// @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.2.9
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案。
+// @version             1.3.0
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
@@ -244,6 +244,9 @@ function missonStart() {
     let _type = _mlist[0]['type'],
         _dom = _domList[0],
         _task = _mlist[0];
+    if (_type == undefined) {
+        _type = _mlist[0]['property']["module"]
+    }
     switch (_type) {
         case "video":
             logger('开始处理视频', 'purple')
@@ -259,11 +262,22 @@ function missonStart() {
             break
         case "read":
             logger('开始处理阅读', 'purple')
+            missonRead(_dom, _task)
+            break
+        case "insertbook":
+            logger('开始处理读书', 'purple')
             missonBook(_dom, _task)
             break
         default:
-            logger('暂不支持处理此类型:' + _type + '，跳过。', 'red')
-            switchMission()
+            let GarbageTasks = ['insertimage']
+            if (GarbageTasks.indexOf(_type) != -1) {
+                logger('发现无需处理任务，跳过。', 'red')
+                switchMission()
+            } else {
+                logger('暂不支持处理此类型:' + _type + '，跳过。', 'red')
+                switchMission()
+            }
+
     }
 }
 
@@ -340,6 +354,33 @@ function missonVideo(dom, obj) {
     });
 }
 
+function missonBook(dom, obj) {
+    let jobId = obj['property']['jobid'],
+        name = obj['property']['bookname'],
+        jtoken = obj['jtoken'],
+        knowledgeId = _defaults['knowledgeid'],
+        courseId = _defaults['courseid'],
+        clazzId = _defaults['clazzId'];
+    if (obj['job'] == undefined) {
+        logger('读书：' + name + '检测已完成，准备执行下一个任务。', 'green')
+        switchMission()
+        return
+    }
+    $.ajax({
+        url: _l.protocol + "//" + _l.host + '/ananas/job?jobid=' + jobId + '&knowledgeid=' + knowledgeId + '&courseid=' + courseId + '&clazzid=' + clazzId + '&jtoken=' + jtoken + '&_dc=' + String(Math.round(new Date())),
+        method: 'GET',
+        success: function (res) {
+            if (res.status) {
+                logger('读书：' + name + res.msg + ',准备执行下一个任务。', 'green')
+            } else {
+                logger('读书：' + name + '处理异常,跳过。', 'red')
+            }
+            switchMission()
+            return
+        },
+    })
+}
+
 function missonLive(dom, obj) {
 
 }
@@ -372,7 +413,7 @@ function missonDoucument(dom, obj) {
 
 }
 
-function missonBook(dom, obj) {
+function missonRead(dom, obj) {
     let jobId = obj['property']['jobid'],
         name = obj['property']['title'],
         jtoken = obj['jtoken'],
@@ -439,7 +480,6 @@ function doHomeWork(index, TiMuList) {
     let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[$(TiMuList[index]).attr('typename')]
     let _questionFull = $(TiMuList[index]).find('.mark_name').html()
     let _question = tidyStr(_questionFull).replace(/^[(].*?[)]/, '').trim()
-    console.log(_question)
     let _a = []
     let _answerTmpArr
     switch (_type) {
