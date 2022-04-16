@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.3.0
+// @version             1.3.1
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -14,6 +14,7 @@
 // @grant               GM_xmlhttpRequest
 // @grant               GM_setValue
 // @grant               GM_getValue
+// @grant               GM_info
 // @require             https://lib.baomitu.com/jquery/2.0.0/jquery.min.js
 // @supportURL          https://script.521daigua.cn/UserGuide/faq.html
 // @homepage            https://script.521daigua.cn
@@ -21,12 +22,17 @@
 // ==/UserScript==
 
 var setting = {
-    video: 1,   // 处理视频，0为关闭，1为开启
-    rate: 1,    // 视频倍速，0为秒过，1为正常速率，最高16倍
-    review: 0,  // 复习模式，0为关闭，1为开启可以补挂视频时长
-    work: 1,    // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
-    sub: 1,     // 测验自动提交，0为关闭,1为开启，当没答案时测验将不会提交，如需提交请设置force：1
-    force: 0,   // 测验强制提交，0为关闭，1为开启，开启此功能将会强制提交测验（无论作答与否）
+    video: 1,       // 处理视频，0为关闭，1为开启
+    rate: 1,        // 视频倍速，0为秒过，1为正常速率，最高16倍
+    review: 0,      // 复习模式，0为关闭，1为开启可以补挂视频时长
+
+    work: 1,        // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
+    sub: 1,         // 测验自动提交，0为关闭,1为开启，当没答案时测验将不会提交，如需提交请设置force：1
+    force: 0,       // 测验强制提交，0为关闭，1为开启，开启此功能将会强制提交测验（无论作答与否）
+
+    autoLogin: 0,   // 自动登录，0为关闭，1为开启，开启此功能请配置登陆配置项
+    phone: '',      // 登录配置项：登录手机号/超星号
+    password: ''    // 登录配置项：登录密码
 }
 
 var _w = unsafeWindow,
@@ -40,6 +46,9 @@ var _mlist, _defaults, _domList, $subBtn, $saveBtn, $frame_c;
 
 if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     showTips();
+} else if (_l.pathname == '/login' && setting.autoLogin) {
+    showBox()
+    setTimeout(() => { autoLogin() }, 3000)
 } else if (_l.pathname == '/mycourse/stu') {
 
 } else if (_l.pathname == '/mycourse/studentstudy') {
@@ -118,9 +127,10 @@ function showBox() {
     </div>`;
         $(box_html).appendTo('body');
     }
+    let _u = getCk('_uid') || getCk('UID')
     GM_xmlhttpRequest({
         method: 'GET',
-        url: _host + '/index.php/cxapi/cxtimu/notice',
+        url: _host + '/index.php/cxapi/cxtimu/notice?u=' + _u + '&v=' + GM_info['script']['version'],
         timeout: 3000,
         onload: function (xhr) {
             if (xhr.status == 200) {
@@ -160,6 +170,23 @@ function getTaskParams() {
         return null
     }
 
+}
+
+function getCk(name) {
+    return document.cookie.match(`[;\s+]?${name}=([^;]*)`)?.pop();
+}
+
+function autoLogin() {
+    logger('用户已设置自动登录', 'green')
+    if (setting.phone.length <= 0 || setting.password.length <= 0) {
+        logger('用户未设置登录信息', 'red')
+        return
+    }
+    setTimeout(() => {
+        $('#phone').val(setting.phone)
+        $('#pwd').val(setting.password)
+        $('#loginBtn').click()
+    }, 3000)
 }
 
 function getEnc(a, b, c, d, e, f, g) {
@@ -1128,10 +1155,9 @@ function switchMission() {
     setTimeout(missonStart, 5000)
 }
 
-function tidyStr(str) {
-    str = str.replace(/<(?!img).*?>/g, ""),
-        str = str.replace(/^【.*?】\s*/, '').replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, '')
-    str = str.trim().replace(/&nbsp;/g, '').replace(/\s*/, '')
+function tidyStr(s) {
+    let str = s.replace(/<(?!img).*?>/g, "").replace(/^【.*?】\s*/, '').replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, '').trim().replace(/&nbsp;/g, '')
     return str
 }
+
 
