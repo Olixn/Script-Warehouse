@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.3.1
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此800行代码献给我的大学生活及热爱，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
+// @version             1.3.2
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
@@ -34,6 +34,8 @@ var setting = {
     phone: '',      // 登录配置项：登录手机号/超星号
     password: ''    // 登录配置项：登录密码
 }
+
+
 
 var _w = unsafeWindow,
     _l = location,
@@ -80,6 +82,9 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
 } else if (_l.pathname == '/mooc2/work/view') {
     showBox()
     setTimeout(() => { uploadHomeWork() }, 3000)
+} else if (_l.pathname == '/mycourse/studentcourse') { 
+    // 强制体验新版，防止出现一些睿智问题
+    $('.navshow').find('a:contains(体验新版)')[0] ? $('.navshow').find('a:contains(体验新版)')[0].click() : '';
 } else {
     console.log(_l.pathname)
 }
@@ -218,7 +223,7 @@ function getEnc(a, b, c, d, e, f, g) {
 
 function toNext() {
     refreshCourseList().then((res) => {
-        if (setting.review) {
+        if (setting.review || !setting.work) {
             setTimeout(() => {
                 $('#mainid > .prev_next.next').click()
             }, 5000)
