@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.3.2
+// @version             1.3.3
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -22,6 +22,8 @@
 // ==/UserScript==
 
 var setting = {
+    task: 1,        // 只处理任务点任务，0为关闭，1为开启
+
     video: 1,       // 处理视频，0为关闭，1为开启
     rate: 1,        // 视频倍速，0为秒过，1为正常速率，最高16倍
     review: 0,      // 复习模式，0为关闭，1为开启可以补挂视频时长
@@ -68,10 +70,17 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
         logger('无任务点可处理，即将跳转页面', 'red')
         toNext()
     } else {
-        _mlist = $.parseJSON(params)['attachments']
-        _defaults = $.parseJSON(params)['defaults']
-        _domList = $('#iframe').contents().find('.ans-attach-ct')
-        setTimeout(() => { missonStart() }, 3000)
+        setTimeout(() => {
+            _domList = []
+            _mlist = $.parseJSON(params)['attachments']
+            _defaults = $.parseJSON(params)['defaults']
+            $.each($('#iframe').contents().find('.wrap .ans-attach-ct'), (i, t) => {
+                if (!setting.task || $(t).find('.ans-job-icon')[0] != undefined) {
+                    _domList.push($(t).find('iframe'))
+                }
+            })
+            missonStart()
+        }, 3000)
     }
 } else if (_l.pathname == '/exam/test/reVersionTestStartNew') {
     showBox()
@@ -82,7 +91,7 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
 } else if (_l.pathname == '/mooc2/work/view') {
     showBox()
     setTimeout(() => { uploadHomeWork() }, 3000)
-} else if (_l.pathname == '/mycourse/studentcourse') { 
+} else if (_l.pathname == '/mycourse/studentcourse') {
     // 强制体验新版，防止出现一些睿智问题
     $('.navshow').find('a:contains(体验新版)')[0] ? $('.navshow').find('a:contains(体验新版)')[0].click() : '';
 } else {
@@ -319,71 +328,92 @@ function missonVideo(dom, obj) {
         setTimeout(() => { switchMission() }, 3000)
         return
     }
-    let classId = _defaults['clazzId'],
-        userId = _defaults['userid'],
-        fid = _defaults['fid'],
-        reportUrl = _defaults['reportUrl'],
-        isPassed = obj['isPassed'],
-        otherInfo = obj['otherInfo'],
-        jobId = obj['property']['jobid'],
-        name = obj['property']['name'],
-        objectId = obj['property']['objectid'];
-    if (!setting.review && isPassed == true) {
-        logger('视频：' + name + '检测已完成，准备处理下一个任务', 'green')
+    let isDo;
+    if (setting.task) {
+        logger("当前只处理任务点任务", 'red')
+        if (obj['jobid'] == undefined ? false : true) {
+            isDo = true
+        } else {
+            isDo = false
+        }
+    } else {
+        logger("当前默认处理所有任务（包括非任务点任务）", 'red')
+        isDo = true
+    }
+    if (isDo) {
+        let classId = _defaults['clazzId'],
+            userId = _defaults['userid'],
+            fid = _defaults['fid'],
+            reportUrl = _defaults['reportUrl'],
+            isPassed = obj['isPassed'],
+            otherInfo = obj['otherInfo'],
+            jobId = obj['property']['_jobid'],
+            name = obj['property']['name'],
+            objectId = obj['property']['objectid'];
+        let ifs = $(dom).attr('style');
+        $(dom).contents().find('body').find('.main').attr('style', 'visibility:hidden;')
+        $(dom).contents().find('body').prepend('<img src="https://pic.521daigua.cn/bg.jpg!/format/webp" style="' + ifs + 'display:block;width:100%;"/>')
+        if (!setting.review && isPassed == true) {
+            logger('视频：' + name + '检测已完成，准备处理下一个任务', 'green')
+            switchMission()
+            return
+        } else if (setting.review) {
+            logger('已开启复习模式，开始处理视频：' + name, 'pink')
+        }
+        $.ajax({
+            url: _l.protocol + '//' + _l.host + "/ananas/status/" + objectId + '?k=' + fid + '&flag=normal&_dc=' + String(Math.round(new Date())),
+            type: "GET",
+            success: function (res) {
+                try {
+                    let duration = res['duration'],
+                        dtoken = res['dtoken'],
+                        clipTime = '0_' + duration,
+                        playingTime = 0,
+                        isdrag = 0;
+                    if (setting.rate == 0) {
+                        logger('已开启视频秒过，可能会导致进度重置、挂科等问题。', 'red')
+                    } else if (setting.rate > 1 && setting.rate <= 16) {
+                        logger('已开启视频倍速，当前倍速：' + setting.rate + ',可能会导致进度重置、挂科等问题。', 'red')
+                    } else if (setting.rate > 16) {
+                        setting.rate = 1
+                        logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
+                    }
+                    logger("视频：" + name + "开始播放")
+                    let _loop = setInterval(() => {
+                        playingTime += 40 * setting.rate
+                        if (playingTime >= duration || setting.rate == 0) {
+                            clearInterval(_loop)
+                            playingTime = duration
+                            isdrag = 4
+                        }
+                        updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag).then((status) => {
+                            switch (status) {
+                                case 0:
+                                    playingTime -= 40
+                                    break
+                                case 1:
+                                    logger("视频：" + res['filename'] + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
+                                    break
+                                case 2:
+                                    clearInterval(_loop)
+                                    logger("视频：" + res['filename'] + "检测播放完毕，准备处理下一个任务。", 'green')
+                                    switchMission()
+                                    break
+                                default:
+                                    console.log(status)
+                            }
+                        })
+                    }, 40000)
+                } catch (e) {
+                    logger('发生错误：' + e, 'red')
+                }
+            }
+        });
+    } else {
+        logger('用户设置只处理属于任务点的视频，准备处理下一个任务', 'green')
         switchMission()
         return
-    } else if (setting.review) {
-        logger('已开启复习模式，开始处理视频：' + name, 'pink')
     }
-    $.ajax({
-        url: _l.protocol + '//' + _l.host + "/ananas/status/" + objectId + '?k=' + fid + '&flag=normal&_dc=' + String(Math.round(new Date())),
-        type: "GET",
-        success: function (res) {
-            try {
-                let duration = res['duration'],
-                    dtoken = res['dtoken'],
-                    clipTime = '0_' + duration,
-                    playingTime = 0,
-                    isdrag = 0;
-                if (setting.rate == 0) {
-                    logger('已开启视频秒过，可能会导致进度重置、挂科等问题。', 'red')
-                } else if (setting.rate > 1 && setting.rate <= 16) {
-                    logger('已开启视频倍速，当前倍速：' + setting.rate + ',可能会导致进度重置、挂科等问题。', 'red')
-                } else if (setting.rate > 16) {
-                    setting.rate = 1
-                    logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
-                }
-                logger("视频：" + name + "开始播放")
-                let _loop = setInterval(() => {
-                    playingTime += 40 * setting.rate
-                    if (playingTime >= duration || setting.rate == 0) {
-                        clearInterval(_loop)
-                        playingTime = duration
-                        isdrag = 4
-                    }
-                    updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag).then((status) => {
-                        switch (status) {
-                            case 0:
-                                playingTime -= 40
-                                break
-                            case 1:
-                                logger("视频：" + res['filename'] + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
-                                break
-                            case 2:
-                                clearInterval(_loop)
-                                logger("视频：" + res['filename'] + "检测播放完毕，准备处理下一个任务。", 'green')
-                                switchMission()
-                                break
-                            default:
-                                console.log(status)
-                        }
-                    })
-                }, 40000)
-            } catch (e) {
-                logger('发生错误：' + e, 'red')
-            }
-        }
-    });
 }
 
 function missonBook(dom, obj) {
@@ -478,23 +508,41 @@ function missonWork(dom, obj) {
         switchMission()
         return
     }
-    let workIframe = $(dom).find('iframe').contents().find('iframe')
-    $(workIframe).ready(() => {
-        logger('等待测验框架加载...', 'purple')
-        if (workIframe.length == 0) { return setTimeout(() => { missonWork(dom, obj) }, 3000) }
-        let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span:nth-child(1)').text().trim()
-        if (workStatus.indexOf("已完成") != -1) {
-            logger('检测到此测验已完成，准备收录答案。', 'green')
-            upLoadWork(workIframe)
-        } else if (workStatus.indexOf("待做") != -1) {
-            logger('准备处理此测验...', 'purple')
-            doWork(workIframe)
-        } else if (workStatus.indexOf('待批阅') != -1) {
-            switchMission()
+    let isDo;
+    if (setting.task) {
+        logger("当前只处理任务点任务", 'red')
+        if (obj['jobid'] == undefined ? false : true) {
+            isDo = true
         } else {
-            return setTimeout(() => { missonWork(dom, obj) }, 3000)
+            isDo = false
         }
-    })
+    } else {
+        logger("当前默认处理所有任务（包括非任务点任务）", 'red')
+        isDo = true
+    }
+    if (isDo) {
+        let workIframe = $(dom).contents().find('iframe')
+        $(workIframe).ready(() => {
+            logger('等待测验框架加载...', 'purple')
+            if (workIframe.length == 0) { return setTimeout(() => { missonWork(dom, obj) }, 3000) }
+            let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span:nth-child(1)').text().trim()
+            if (workStatus.indexOf("已完成") != -1) {
+                logger('检测到此测验已完成，准备收录答案。', 'green')
+                upLoadWork(workIframe)
+            } else if (workStatus.indexOf("待做") != -1) {
+                logger('准备处理此测验...', 'purple')
+                doWork(workIframe)
+            } else if (workStatus.indexOf('待批阅') != -1) {
+                switchMission()
+            } else {
+                return setTimeout(() => { missonWork(dom, obj) }, 3000)
+            }
+        })
+    } else {
+        logger('用户设置只处理属于任务点的视频，准备处理下一个任务', 'green')
+        switchMission()
+        return
+    }
 }
 
 function missonHomeWork() {
