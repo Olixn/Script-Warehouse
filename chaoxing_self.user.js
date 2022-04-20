@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.3.3
+// @version             1.3.4
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -22,13 +22,14 @@
 // ==/UserScript==
 
 var setting = {
-    task: 1,        // 只处理任务点任务，0为关闭，1为开启
+    task: 0,        // 只处理任务点任务，0为关闭，1为开启
 
     video: 1,       // 处理视频，0为关闭，1为开启
     rate: 1,        // 视频倍速，0为秒过，1为正常速率，最高16倍
     review: 0,      // 复习模式，0为关闭，1为开启可以补挂视频时长
 
     work: 1,        // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
+    time: 5000,     // 答题时间间隔，默认5s=5000ms
     sub: 1,         // 测验自动提交，0为关闭,1为开启，当没答案时测验将不会提交，如需提交请设置force：1
     force: 0,       // 测验强制提交，0为关闭，1为开启，开启此功能将会强制提交测验（无论作答与否）
 
@@ -64,7 +65,12 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     }
     $('#ne-21log').html('')
     let cur_title = $('#mainid > div.prev_title_pos > div').text()
-    logger('当前页面：' + cur_title, 'black')
+    if (cur_title == '') {
+        logger('Tips:检测当前页面为旧版学习通界面，请使用新版界面的学习通！！！！！！！！！！！！！！！', 'red')
+        logger('Tips:如果不使用新版界面的学习通，可能会出现各种睿智问题！！！！！！！！！！！！！！！！', 'red')
+    } else {
+        logger('当前页面：' + cur_title, 'black')
+    }
     var params = getTaskParams()
     if (params == null || params == '$mArg' || $.parseJSON(params)['attachments'].length <= 0) {
         logger('无任务点可处理，即将跳转页面', 'red')
@@ -74,9 +80,13 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
             _domList = []
             _mlist = $.parseJSON(params)['attachments']
             _defaults = $.parseJSON(params)['defaults']
-            $.each($('#iframe').contents().find('.wrap .ans-attach-ct'), (i, t) => {
-                if (!setting.task || $(t).find('.ans-job-icon')[0] != undefined) {
+            $.each($('#iframe').contents().find('.wrap .ans-cc p'), (i, t) => {
+                if (!setting.task && $(t).find('iframe')[0] != undefined) {
                     _domList.push($(t).find('iframe'))
+                } else {
+                    if ($(t).find('.ans-job-icon')[0] != undefined) {
+                        _domList.push($(t).find('iframe'))
+                    }
                 }
             })
             missonStart()
@@ -124,6 +134,7 @@ function showTips() {
             }
         },
         ontimeout: function () {
+            logger('Tips:连接服务器失败！！！！！！！！！！！', 'red')
             var _msg = "拖动进度条、倍速播放、秒过会导致不良记录！题库在慢慢补充，搜不到的题目系统会尽快进行自动补充，最新脚本更新发布官网：http://521daigua.cn";
             _w.layui.use('layer', function () {
                 this.layer.open({ content: _msg, title: '超星学习小助手提示', btn: '我已知悉', offset: 't', closeBtn: 0 });
@@ -410,7 +421,7 @@ function missonVideo(dom, obj) {
             }
         });
     } else {
-        logger('用户设置只处理属于任务点的视频，准备处理下一个任务', 'green')
+        logger('用户设置只处理属于任务点的任务，准备处理下一个任务', 'green')
         switchMission()
         return
     }
@@ -539,7 +550,7 @@ function missonWork(dom, obj) {
             }
         })
     } else {
-        logger('用户设置只处理属于任务点的视频，准备处理下一个任务', 'green')
+        logger('用户设置只处理属于任务点的任务，准备处理下一个任务', 'green')
         switchMission()
         return
     }
@@ -565,56 +576,56 @@ function doHomeWork(index, TiMuList) {
     switch (_type) {
         case 0:
             _answerTmpArr = $(TiMuList[index]).find('.stem_answer').find('.answer_p')
-            getExamAnswer(_type, _question).then((agrs) => {
+            getAnswer(_type, _question).then((agrs) => {
                 $.each(_answerTmpArr, (i, t) => {
                     _a.push(tidyStr($(t).html()))
                 })
                 let _i = _a.findIndex((item) => item == agrs)
                 if (_i == -1) {
                     logger('未匹配到正确答案，跳过此题', 'red')
-                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 } else {
                     setTimeout(() => {
                         $(_answerTmpArr[_i]).parent().click()
                         logger('自动答题成功，准备切换下一题', 'green')
-                        setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                        setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                     }, 300)
                 }
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
-                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 }
             })
             break
         case 1:
             _answerTmpArr = $(TiMuList[index]).find('.stem_answer').find('.answer_p')
-            getExamAnswer(_type, _question).then((agrs) => {
+            getAnswer(_type, _question).then((agrs) => {
                 $.each(_answerTmpArr, (i, t) => {
                     if (agrs.indexOf(tidyStr($(t).html())) != -1) {
                         setTimeout(() => { $(_answerTmpArr[i]).parent().click() }, 300)
                     }
                 })
                 logger('自动答题成功，准备切换下一题', 'green')
-                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
-                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 }
             })
             break
         case 2:
             let _textareaList = $(TiMuList[index]).find('.stem_answer').find('.Answer .divText .textDIV textarea')
-            getExamAnswer(_type, _question).then((agrs) => {
+            getAnswer(_type, _question).then((agrs) => {
                 let _answerTmpArr = agrs.split('#')
                 $.each(_textareaList, (i, t) => {
                     let _id = $(t).attr('id')
                     setTimeout(() => { UE.getEditor(_id).setContent(_answerTmpArr[i]) }, 300)
                 })
                 logger('自动答题成功，准备切换下一题', 'green')
-                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
-                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 }
             })
             break
@@ -626,24 +637,24 @@ function doHomeWork(index, TiMuList) {
             $.each(_answerTmpArr, (i, t) => {
                 _a.push($(t).text().trim())
             })
-            getExamAnswer(_qType, _question).then((agrs) => {
+            getAnswer(_qType, _question).then((agrs) => {
                 if (_true.indexOf(agrs) != -1) {
                     _i = _a.findIndex((item) => _true.indexOf(item) != -1)
                 } else if (_false.indexOf(agrs) != -1) {
                     _i = _a.findIndex((item) => _false.indexOf(item) != -1)
                 } else {
                     logger('答案匹配出错，准备切换下一题', 'green')
-                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                     return
                 }
                 setTimeout(() => { $(_answerTmpArr[_i]).parent().click() }, 300)
                 logger('自动答题成功，准备切换下一题', 'green')
-                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
             })
             break
         default:
             logger('暂不支持处理此题型：' + $(TiMuList[index]).attr('typename') + ',跳过。', 'red')
-            setTimeout(() => { doHomeWork(index + 1, TiMuList) }, 5000)
+            setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
     }
 }
 
@@ -658,7 +669,7 @@ function missonExam() {
     switch (_qType) {
         case 0:
             _answerTmpArr = $_ansdom.find('.clearfix.answerBg .fl.answer_p')
-            getExamAnswer(_qType, _question).then((agrs) => {
+            getAnswer(_qType, _question).then((agrs) => {
                 $.each(_answerTmpArr, (i, t) => {
                     _a.push(tidyStr($(t).html()))
                 })
@@ -686,7 +697,7 @@ function missonExam() {
             break
         case 1:
             _answerTmpArr = $_ansdom.find('.clearfix.answerBg .fl.answer_p')
-            getExamAnswer(_qType, _question).then((agrs) => {
+            getAnswer(_qType, _question).then((agrs) => {
                 if ($_ansdom.find('.clearfix.answerBg span.check_answer_dx').length > 0) {
                     logger('此题已作答，准备切换下一题', 'green')
                     toNextExam()
@@ -707,7 +718,7 @@ function missonExam() {
             break
         case 2:
             let _textareaList = $_ansdom.find('.Answer .divText .subEditor textarea')
-            getExamAnswer(_qType, _question).then((agrs) => {
+            getAnswer(_qType, _question).then((agrs) => {
                 let _answerTmpArr = agrs.split('#')
                 $.each(_textareaList, (i, t) => {
                     let _id = $(t).attr('id')
@@ -729,7 +740,7 @@ function missonExam() {
             $.each(_answerTmpArr, (i, t) => {
                 _a.push($(t).text().trim())
             })
-            getExamAnswer(_qType, _question).then((agrs) => {
+            getAnswer(_qType, _question).then((agrs) => {
                 if (_true.indexOf(agrs) != -1) {
                     _i = _a.findIndex((item) => _true.indexOf(item) != -1)
                 } else if (_false.indexOf(agrs) != -1) {
@@ -760,50 +771,6 @@ function toNextExam() {
     setTimeout(() => {
         $nextbtn.click()
     }, 2000)
-}
-
-
-function getExamAnswer(_type, _question) {
-    return new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-            method: 'POST',
-            url: _host + '/index.php/cxapi/cxtimu/getanswer?v=2',
-            headers: {
-                'Content-type': 'application/x-www-form-urlencoded',
-            },
-            data: 'question=' + encodeURIComponent(_question),
-            timeout: 5000,
-            onload: function (xhr) {
-                if (xhr.status == 200) {
-                    var obj = $.parseJSON(xhr.responseText) || {},
-                        _answer = obj.data;
-                    if (obj.code) {
-                        logger('题目：' + _question + " | 答案：" + _answer, 'purple')
-                        resolve(_answer)
-                    } else {
-                        logger('题目：' + _question + "暂无答案", 'purple')
-                        reject({ 'c': 0 })
-                    }
-                } else if (xhr.status == 403) {
-                    logger('请求过于频繁，请稍后再试', 'red')
-                    reject({ 'c': 403 })
-                } else if (xhr.status == 500) {
-                    logger('题库程序异常,请过一会再试', 'red')
-                    reject({ 'c': 500 })
-                } else if (xhr.status == 444) {
-                    logger('IP异常，已被拉入服务器黑名单，请过几个小时再试', 'red')
-                    reject({ 'c': 444 })
-                } else {
-                    logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
-                    reject({ 'c': 555 })
-                }
-            },
-            ontimeout: function () {
-                logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
-                reject({ 'c': 666 })
-            }
-        });
-    })
 }
 
 function refreshCourseList() {
@@ -1044,22 +1011,62 @@ function uploadHomeWork() {
 }
 
 
-function doWork(dom) {
-    let $CyHtml = $(dom).contents().find('.CeYan')
-    let TiMuList = $CyHtml.find('.TiMu')
-    let index = 0
-    $frame_c = $(dom).contents()
-    $subBtn = $CyHtml.find('.ZY_sub').find('.Btn_blue_1')
-    $saveBtn = $CyHtml.find('.ZY_sub').find('.btnGray_1')
-    getAnswer(index, TiMuList).then((args) => {
-        setTimeout(() => { resolveCallback(args) }, 5000)
-    }).catch((args) => {
-        setTimeout(() => { rejectCallback(args) }, 5000)
+function getAnswer(_t, _q) {
+    return new Promise((resolve, reject) => {
+        let _u = getCk('_uid') || getCk('UID')
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: _host + '/index.php/cxapi/cxtimu/getanswer?v=3',
+            headers: {
+                'Content-type': 'application/x-www-form-urlencoded',
+            },
+            data: 'question=' + encodeURIComponent(_q) + '&u=' + _u,
+            timeout: setting.time,
+            onload: function (xhr) {
+                if (xhr.status == 200) {
+                    var obj = $.parseJSON(xhr.responseText) || {},
+                        _answer = obj.data;
+                    if (obj.code) {
+                        logger('题目:' + _q + "|答案:" + _answer, 'purple')
+                        resolve(_answer)
+                    } else {
+                        logger('题目:' + _q + "暂无答案", 'purple')
+                        reject({ 'c': 0 })
+                    }
+                } else if (xhr.status == 403) {
+                    logger('请求过于频繁，请稍后再试', 'red')
+                    reject({ 'c': 403 })
+                } else if (xhr.status == 500) {
+                    logger('题库程序异常,请过一会再试', 'red')
+                    reject({ 'c': 500 })
+                } else if (xhr.status == 444) {
+                    logger('IP异常，已被拉入服务器黑名单，请过几个小时再试', 'red')
+                    reject({ 'c': 444 })
+                } else {
+                    logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
+                    reject({ 'c': 555 })
+                }
+            },
+            ontimeout: function () {
+                logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
+                reject({ 'c': 666 })
+            }
+        });
     })
 }
 
-function resolveCallback(args) {
-    if (args == undefined) {
+function doWork(dom) {
+    let $CyHtml = $(dom).contents().find('.CeYan')
+    let TiMuList = $CyHtml.find('.TiMu')
+    $frame_c = $(dom).contents()
+    $subBtn = $CyHtml.find('.ZY_sub').find('.Btn_blue_1')
+    $saveBtn = $CyHtml.find('.ZY_sub').find('.btnGray_1')
+    startDoWork(0, TiMuList)
+}
+
+
+function startDoWork(index, TiMuList) {
+    if (index == TiMuList.length) {
         if (setting.sub) {
             logger('测验处理完成，准备自动提交。', 'green')
             setTimeout(() => {
@@ -1083,121 +1090,85 @@ function resolveCallback(args) {
         } else {
             logger('测验处理完成，存在无答案题目或用户设置不自动提交。', 'green')
         }
-    } else {
-        getAnswer(args['index'] + 1, args['TiMuList']).then((args) => {
-            setTimeout(() => { resolveCallback(args) }, 5000)
-        })
+        return
     }
-}
-
-function rejectCallback(args) {
-    if (args['c'] == 0) {
-        setting.sub = 0
-        setTimeout(() => { resolveCallback(args) }, 5000)
-    } else {
-        getAnswer(args['index'], args['TiMuList']).then((args) => {
-            setTimeout(() => { resolveCallback(args) }, 5000)
-        })
-    }
-}
-
-function getAnswer(index, TiMuList) {
-    return new Promise((resolve, reject) => {
-        if (index + 1 == TiMuList.length) { resolve() } {
-            let questionFull = $(TiMuList[index]).find('.Zy_TItle.clearfix > div').html()
-            let _question = tidyStr(questionFull)
-            let _TimuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[questionFull.match(/^【(.*?)】|$/)[1]]
-            GM_xmlhttpRequest({
-                method: 'POST',
-                url: _host + '/index.php/cxapi/cxtimu/getanswer?v=2',
-                headers: {
-                    'Content-type': 'application/x-www-form-urlencoded',
-                },
-                data: 'question=' + encodeURIComponent(_question),
-                timeout: 5000,
-                onload: function (xhr) {
-                    if (xhr.status == 200) {
-                        var obj = $.parseJSON(xhr.responseText) || {},
-                            _answer = obj.data;
-                        if (obj.code) {
-                            logger('题目' + (index + 1) + '：' + _question + " | 答案：" + _answer, 'purple')
-                            fillAnswer(TiMuList[index], { index, _TimuType, _answer })
-                            resolve({ index, TiMuList })
-                        } else {
-                            logger('题目' + (index + 1) + '：' + _question + "暂无答案", 'purple')
-                            reject({ index, 'c': 0, TiMuList })
-                        }
-                    } else if (xhr.status == 403) {
-                        logger('请求过于频繁，请稍后再试', 'red')
-                        reject({ index, 'c': 403, TiMuList })
-                    } else if (xhr.status == 500) {
-                        logger('题库程序异常,请过一会再试', 'red')
-                        reject({ index, 'c': 500, TiMuList })
-                    } else if (xhr.status == 444) {
-                        logger('IP异常，已被拉入服务器黑名单，请过几个小时再试', 'red')
-                        reject({ index, 'c': 444, TiMuList })
-                    } else {
-                        logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
-                        reject({ index, 'c': 555, TiMuList })
-                    }
-                },
-                ontimeout: function () {
-                    logger('题库异常,可能被恶意攻击了...请等待恢复', 'red')
-                    reject({ index, 'c': 666, TiMuList })
-                }
-            });
-        }
-    })
-}
-
-function fillAnswer(dom, obj) {
-    let _answerTmpArr;
+    let questionFull = $(TiMuList[index]).find('.Zy_TItle.clearfix > div').html()
+    let _question = tidyStr(questionFull)
+    let _TimuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[questionFull.match(/^【(.*?)】|$/)[1]]
     let _a = []
-    switch (obj['_TimuType']) {
+    let _answerTmpArr
+    switch (_TimuType) {
         case 0:
-            _answerTmpArr = $(dom).find('.Zy_ulTop li').find('a')
+            _answerTmpArr = $(TiMuList[index]).find('.Zy_ulTop li').find('a')
             $.each(_answerTmpArr, (i, t) => {
                 _a.push(tidyStr($(t).html()))
             })
-            let _i = _a.findIndex((item) => item == obj['_answer'])
-            if (_i == -1) { return setting.sub = 0 }
-            $(_answerTmpArr[_i]).parent().find('input').attr('checked', 'checked')
+            getAnswer(_TimuType, _question).then((agrs) => {
+                let _i = _a.findIndex((item) => item == agrs)
+                if (_i == -1) {
+                    logger('未匹配到正确答案，跳过', 'red')
+                    setting.sub = 0
+                } else {
+                    $(_answerTmpArr[_i]).parent().find('input').attr('checked', 'checked')
+                }
+                setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
+            })
             break
         case 1:
-            _answerTmpArr = $(dom).find('.Zy_ulTop li').find('a')
-            $.each(_answerTmpArr, (i, t) => {
-                if (obj['_answer'].indexOf(tidyStr($(t).html())) != -1) {
-                    $(_answerTmpArr[i]).parent().find('input').attr('checked', 'checked')
-                    _a.push(['A', 'B', 'C', 'D', 'E', 'F', 'G'][i])
+            _answerTmpArr = $(TiMuList[index]).find('.Zy_ulTop li').find('a')
+            getAnswer(_TimuType, _question).then((agrs) => {
+                $.each(_answerTmpArr, (i, t) => {
+                    if (agrs.indexOf(tidyStr($(t).html())) != -1) {
+                        $(_answerTmpArr[i]).parent().find('input').attr('checked', 'checked')
+                        _a.push(['A', 'B', 'C', 'D', 'E', 'F', 'G'][i])
+                    }
+                })
+                let id = getStr($(TiMuList[index]).find('.Zy_ulTop li:nth-child(1)').attr('onclick'), 'addcheck(', ');').replace('(', '').replace(')', '')
+                if (_a.length <= 0) {
+                    logger('未匹配到正确答案，跳过', 'red')
+                    setting.sub = 0
                 } else {
-
+                    $(TiMuList[index]).find('.Zy_ulTop').parent().find('#answer' + id).val(_a.join(""))
                 }
+                setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
             })
-            let id = getStr($(dom).find('.Zy_ulTop li:nth-child(1)').attr('onclick'), 'addcheck(', ');').replace('(', '').replace(')', '')
-            if (_a.length <= 0) { return setting.sub = 0 }
-            $(dom).find('.Zy_ulTop').parent().find('#answer' + id).val(_a.join(""))
             break
         case 2:
-            let _textareaList = $(dom).find('.Zy_ulTk .XztiHover1')
-            let _answerList = obj['_answer'].split("#")
-            $.each(_textareaList, (i, t) => {
-                setTimeout(() => {
-                    $(t).find('#ueditor_' + i).contents().find('.view p').html(_answerList[i]);
-                    $(t).find('textarea').html('<p>' + _answerList[i] + '</p>')
-                }, 300)
+            let _textareaList = $(TiMuList[index]).find('.Zy_ulTk .XztiHover1')
+            getAnswer(_TimuType, _question).then((agrs) => {
+                let _answerList = agrs.split("#")
+                $.each(_textareaList, (i, t) => {
+                    setTimeout(() => {
+                        $(t).find('#ueditor_' + i).contents().find('.view p').html(_answerList[i]);
+                        $(t).find('textarea').html('<p>' + _answerList[i] + '</p>')
+                    }, 300)
+                })
+                setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
             })
             break
         case 3:
-            _answerTmpArr = $(dom).find('.Zy_ulBottom li')
+            _answerTmpArr = $(TiMuList[index]).find('.Zy_ulBottom li')
             let _true = '正确|是|对|√|T|ri'
             let _false = '错误|否|错|×|F|wr'
-            if (_true.indexOf(obj['_answer']) != -1) {
-                $(dom).find('.Zy_ulBottom li').find('.ri').parent().find('input').attr('checked', 'checked')
-            } else if (_false.indexOf(obj['_answer']) != -1) {
-                $(dom).find('.Zy_ulBottom li').find('.wr').parent().find('input').attr('checked', 'checked')
-            } else {
-                return setting.sub = 0
-            }
+            getAnswer(_TimuType, _question).then((agrs) => {
+                if (_true.indexOf(agrs) != -1) {
+                    $(TiMuList[index]).find('.Zy_ulBottom li').find('.ri').parent().find('input').attr('checked', 'checked')
+                } else if (_false.indexOf(agrs) != -1) {
+                    $(TiMuList[index]).find('.Zy_ulBottom li').find('.wr').parent().find('input').attr('checked', 'checked')
+                } else {
+                    logger('未匹配到正确答案，跳过', 'red')
+                    setting.sub = 0
+                }
+                setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
+            })
             break
     }
 }
