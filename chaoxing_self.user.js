@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.3.5
+// @version             1.3.6
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -856,17 +856,19 @@ function upLoadWork(dom) {
             logger('获取的题目：' + _question, 'red')
             return
         }
+        console.log(_question)
         switch (_TimuType) {
             case 0:
                 if (_selfAnswerCheck == "fr dui") {
-                    let _selfAnswer = ({ A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 })[$(TiMuList[i]).find('.Py_answer.clearfix > span').html().trim().replace(/我的答案：/, '')]
+                    let _selfAnswer = ({ A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 })[$(TiMuList[i]).find('.Py_answer.clearfix > span').html().trim().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()]
                     let _answerForm = $(TiMuList[i]).find('.Zy_ulTop li')
                     let _answer = $(_answerForm[_selfAnswer]).find('a.fl').html()
+                    console.log(_answer)
                     _a['answer'] = tidyStr(_answer)
                 }
                 break
             case 1:
-                let _answerArr = $(TiMuList[i]).find('.Py_answer.clearfix > span').html().trim().replace(/我的答案：/, '').split("")
+                let _answerArr = $(TiMuList[i]).find('.Py_answer.clearfix > span').html().trim().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()
                 let _answerForm = $(TiMuList[i]).find('.Zy_ulTop li')
                 let _answer = []
                 if (_selfAnswerCheck == "fr dui" || _selfAnswerCheck == "fr bandui") {
@@ -892,10 +894,10 @@ function upLoadWork(dom) {
                 break
             case 3:
                 if (_selfAnswerCheck == "fr dui") {
-                    let _answer = $(TiMuList[i]).find('.Py_answer.clearfix > span > i').html().trim().replace(/我的答案：/, '')
+                    let _answer = $(TiMuList[i]).find('.Py_answer.clearfix > span > i').html().trim().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()
                     _a['answer'] = tidyStr(_answer)
                 } else {
-                    let _answer = $(TiMuList[i]).find('.Py_answer.clearfix > span > i').html().trim().replace(/我的答案：/, '')
+                    let _answer = $(TiMuList[i]).find('.Py_answer.clearfix > span > i').html().trim().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()
                     _a['answer'] = (tidyStr(_answer) == '√' ? 'x' : '√')
                 }
                 break
