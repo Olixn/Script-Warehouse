@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.3.4
+// @version             1.3.5
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -535,7 +535,10 @@ function missonWork(dom, obj) {
         let workIframe = $(dom).contents().find('iframe')
         $(workIframe).ready(() => {
             logger('等待测验框架加载...', 'purple')
-            if (workIframe.length == 0) { return setTimeout(() => { missonWork(dom, obj) }, 3000) }
+            if (workIframe.length == 0) {
+                setTimeout(() => { missonWork(dom, obj) }, 5000)
+                return
+            }
             let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span:nth-child(1)').text().trim()
             if (workStatus.indexOf("已完成") != -1) {
                 logger('检测到此测验已完成，准备收录答案。', 'green')
@@ -568,11 +571,11 @@ function doHomeWork(index, TiMuList) {
         logger('作业题目已全部完成', 'green')
         return
     }
-    let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[$(TiMuList[index]).attr('typename')]
+    let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[$(TiMuList[index]).attr('typename')]
     let _questionFull = $(TiMuList[index]).find('.mark_name').html()
     let _question = tidyStr(_questionFull).replace(/^[(].*?[)]/, '').trim()
     let _a = []
-    let _answerTmpArr
+    let _answerTmpArr, _textareaList
     switch (_type) {
         case 0:
             _answerTmpArr = $(TiMuList[index]).find('.stem_answer').find('.answer_p')
@@ -614,7 +617,7 @@ function doHomeWork(index, TiMuList) {
             })
             break
         case 2:
-            let _textareaList = $(TiMuList[index]).find('.stem_answer').find('.Answer .divText .textDIV textarea')
+            _textareaList = $(TiMuList[index]).find('.stem_answer').find('.Answer .divText .textDIV textarea')
             getAnswer(_type, _question).then((agrs) => {
                 let _answerTmpArr = agrs.split('#')
                 $.each(_textareaList, (i, t) => {
@@ -637,7 +640,7 @@ function doHomeWork(index, TiMuList) {
             $.each(_answerTmpArr, (i, t) => {
                 _a.push($(t).text().trim())
             })
-            getAnswer(_qType, _question).then((agrs) => {
+            getAnswer(_type, _question).then((agrs) => {
                 if (_true.indexOf(agrs) != -1) {
                     _i = _a.findIndex((item) => _true.indexOf(item) != -1)
                 } else if (_false.indexOf(agrs) != -1) {
@@ -650,6 +653,21 @@ function doHomeWork(index, TiMuList) {
                 setTimeout(() => { $(_answerTmpArr[_i]).parent().click() }, 300)
                 logger('自动答题成功，准备切换下一题', 'green')
                 setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
+            })
+            break
+        case 4:
+            _textareaList = $(TiMuList[index]).find('.stem_answer').find('.eidtDiv textarea')
+            getAnswer(_type, _question).then((agrs) => {
+                $.each(_textareaList, (i, t) => {
+                    let _id = $(t).attr('id')
+                    setTimeout(() => { UE.getEditor(_id).setContent(agrs) }, 300)
+                })
+                logger('自动答题成功，准备切换下一题', 'green')
+                setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
+                }
             })
             break
         default:
@@ -828,10 +846,16 @@ function upLoadWork(dom) {
         let _a = {}
         let questionFull = $(TiMuList[i]).find('.Zy_TItle.clearfix > div > div:nth-child(1)').html().trim()
         let _question = tidyStr(questionFull)
-        let _TimuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[questionFull.match(/^【(.*?)】|$/)[1]]
+        let _TimuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[questionFull.match(/^【(.*?)】|$/)[1]]
         _a['question'] = _question
         _a['type'] = _TimuType
         let _selfAnswerCheck = $(TiMuList[i]).find('.Py_answer.clearfix > i').attr('class')
+        let fuckFont = $(TiMuList[i]).find('.Zy_TItle.clearfix > div').attr('class')
+        if (fuckFont != 'clearfix') {
+            logger('题目检测可能存在加密乱码，暂停录入!!!!!!!!', 'red')
+            logger('获取的题目：' + _question, 'red')
+            return
+        }
         switch (_TimuType) {
             case 0:
                 if (_selfAnswerCheck == "fr dui") {
@@ -875,6 +899,8 @@ function upLoadWork(dom) {
                     _a['answer'] = (tidyStr(_answer) == '√' ? 'x' : '√')
                 }
                 break
+            case 4:
+                break
         }
         if (_a['answer'] != undefined) {
             data.push(_a)
@@ -912,7 +938,7 @@ function uploadHomeWork() {
         let _answer
         let _answerTmpArr, _answerList = []
         let TiMuFull = tidyStr($(t).find('h3.mark_name').html())
-        let TiMuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[TiMuFull.match(/[(](.*?)[)]|$/)[1]]
+        let TiMuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[TiMuFull.match(/[(](.*?)[)]|$/)[1]]
         let TiMu = TiMuFull.replace(/^[(].*?[)]|$/, '').trim()
         let _rightAns = $(t).find('.mark_answer').find('.colorGreen').text().replace(/正确答案[:：]/, '').trim()
         switch (TiMuType) {
@@ -960,15 +986,26 @@ function uploadHomeWork() {
                 data.push(_a)
                 break
             case 2:
-                _answer = []
+                _answerTmpArr = []
+                let answers = $(t).find('.mark_answer').find('.colorDeep').find('dd')
                 if (_rightAns.length <= 0) {
-                    _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
-                    if (_isTrue == 'marking_dui' || _isTrue == 'marking_bandui') {
-                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
-                    } else {
-                        return
-                    }
+                    $.each(answers, (i, t) => {
+                        _isTrue = $(t).find('span:eq(1)').attr('class')
+                        if (_isTrue == 'marking_dui') {
+                            _rightAns = $(t).find('span:eq(0)').html()
+                            _answerTmpArr.push(_rightAns.replace(/[(][0-9].*?[)]/, '').trim())
+                        } else {
+                            return
+                        }
+                    })
+                    _answer = _answerTmpArr.join('#')
+                } else {
+                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').slice(1)
                 }
+                _a['question'] = TiMu
+                _a['type'] = TiMuType
+                _a['answer'] = _answer
+                data.push(_a)
                 break
             case 3:
                 if (_rightAns.length <= 0) {
@@ -984,6 +1021,15 @@ function uploadHomeWork() {
                             _rightAns = '对'
                         }
                     }
+                }
+                _a['question'] = TiMu
+                _a['type'] = TiMuType
+                _a['answer'] = _rightAns
+                data.push(_a)
+                break
+            case 4:
+                if (_rightAns.length <= 0) {
+                    break
                 }
                 _a['question'] = TiMu
                 _a['type'] = TiMuType
@@ -1094,7 +1140,7 @@ function startDoWork(index, TiMuList) {
     }
     let questionFull = $(TiMuList[index]).find('.Zy_TItle.clearfix > div').html()
     let _question = tidyStr(questionFull)
-    let _TimuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3 })[questionFull.match(/^【(.*?)】|$/)[1]]
+    let _TimuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[questionFull.match(/^【(.*?)】|$/)[1]]
     let _a = []
     let _answerTmpArr
     switch (_TimuType) {
@@ -1170,6 +1216,8 @@ function startDoWork(index, TiMuList) {
                 setTimeout(() => { startDoWork(index + 1, TiMuList) }, setting.time)
             })
             break
+        case 4:
+            console.log(_question)
     }
 }
 
@@ -1180,7 +1228,7 @@ function switchMission() {
 }
 
 function tidyStr(s) {
-    let str = s.replace(/<(?!img).*?>/g, "").replace(/^【.*?】\s*/, '').replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, '').trim().replace(/&nbsp;/g, '')
+    let str = s.replace(/<(?!img).*?>/g, "").replace(/^【.*?】\s*/, '').replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, '').trim().replace(/&nbsp;/g, '').replace('javascript:void(0);', '').replace(new RegExp("&nbsp;", ("gm")), '').replace(/^\s+/, '').replace(/\s+$/, '');
     return str
 }
 
