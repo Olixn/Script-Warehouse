@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.3.8
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题(ocr精度过低)、收录答案、作业、收录作业答案、读书秒过。
+// @version             1.3.9
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
@@ -104,6 +104,9 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
 } else if (_l.pathname == '/mycourse/studentcourse') {
     // 强制体验新版，防止出现一些睿智问题
     $('.navshow').find('a:contains(体验新版)')[0] ? $('.navshow').find('a:contains(体验新版)')[0].click() : '';
+} else if (_l.pathname == '/work/phone/doHomeWork') {
+    // FUCK CONFIRM ALERT
+    _w.confirm = function () { return true }
 } else {
     console.log(_l.pathname)
 }
@@ -233,9 +236,9 @@ function autoLogin() {
 async function fuckCxFont(dom, selector) {
     $(dom).find(selector).prepend(`<style type="text/css">@font-face` + fuckFont + `!important; }</style>`)
     let tmp = $(dom).find(selector)
-    let suit = $(tmp).css('padding','4px').css('letter-spacing', '8px').css('line-height', '50px').css('font-size', '32px')
+    let suit = $(tmp).css('padding', '4px').css('letter-spacing', '8px').css('line-height', '50px').css('font-size', '32px')
     let text = await OCR(suit[0])
-    text = text.replace(/ /g, '').replace(/\n/g, '').replace(/]/, '】').replace(/,/g,'，').replace(/:/g,'：')
+    text = text.replace(/ /g, '').replace(/\n/g, '').replace(/]/, '】').replace(/,/g, '，').replace(/:/g, '：')
     return text
 }
 
@@ -571,13 +574,170 @@ function missonWork(dom, obj) {
         isDo = true
     }
     if (isDo) {
-        setTimeout(() => { startDoCyWork(0, dom) }, 3000)
+        var phoneWeb = _l.protocol + '//' + _l.host + '/work/phone/work?workId=' + obj['jobid'].replace('work-', '') + '&courseId=' + _defaults['courseid'] + '&clazzId=' + _defaults['clazzId'] + '&knowledgeId=' + _defaults['knowledgeid'] + '&jobId=' + obj['jobid'] + '&enc=' + obj['enc']
+        // setTimeout(() => { startDoCyWork(0, dom) }, 3000)
+        setTimeout(() => { startDoPhoneCyWork(0, dom, phoneWeb) }, 3000)
     } else {
         logger('用户设置只处理属于任务点的任务，准备处理下一个任务', 'green')
         switchMission()
         return
     }
 }
+
+function doPhoneWork($dom) {
+    let $cy = $dom.find('.Wrappadding form')
+    $subBtn = $cy.find('.zquestions .zsubmit .btn-ok-bottom')
+    let TimuList = $cy.find('.zquestions .Py-mian1')
+    startDoPhoneTimu(0, TimuList)
+}
+
+function startDoPhoneTimu(index, TimuList) {
+    if (index == TimuList.length) {
+        if (setting.sub) {
+            logger('测验处理完成，准备自动提交。', 'green')
+            setTimeout(() => {
+                $subBtn.click()
+                setTimeout(() => {
+                    logger('提交成功，准备切换下一个任务。', 'green')
+                    _mlist.splice(0, 1)
+                    _domList.splice(0, 1)
+                    setTimeout(() => { missonStart() }, 3000)
+                }, 3000)
+            }, 5000)
+        } else if (setting.force) {
+            logger('测验处理完成，存在无答案题目,由于用户设置了强制提交，准备自动提交。', 'red')
+            setTimeout(() => {
+                $subBtn.click()
+                setTimeout(() => {
+                    logger('提交成功，准备切换下一个任务。', 'green')
+                    _mlist.splice(0, 1)
+                    _domList.splice(0, 1)
+                    setTimeout(() => { missonStart() }, 3000)
+                }, 3000)
+            }, 5000)
+        } else {
+            logger('测验处理完成，存在无答案题目或用户设置不自动提交。', 'green')
+        }
+        return
+    }
+    let questionFull = $(TimuList[index]).find('.Py-m1-title').html()
+    let _question = tidyStr(questionFull).replace(/.*?\[.*?题\]\s*\n\s*/, '').trim()
+    let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[questionFull.match(/.*?\[(.*?)]|$/)[1]]
+    let _a = []
+    let _answerTmpArr
+    switch (_type) {
+        case 0:
+            getAnswer(_type, _question).then((agrs) => {
+                _answerTmpArr = $(TimuList[index]).find('.answerList.singleChoice li')
+                $.each(_answerTmpArr, (i, t) => {
+                    _a.push(tidyStr($(t).find('p').html()))
+                })
+                let _i = _a.findIndex((item) => item == agrs)
+                if (_i == -1) {
+                    logger('未匹配到正确答案，跳过此题', 'red')
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                } else {
+                    $(_answerTmpArr[_i]).click()
+                    logger('自动答题成功，准备切换下一题', 'green')
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                }
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                }
+            })
+            break
+        case 1:
+            getAnswer(_type, _question).then((agrs) => {
+                _answerTmpArr = $(TimuList[index]).find('.answerList.multiChoice li')
+                $.each(_answerTmpArr, (i, t) => {
+                    let _tt = tidyStr($(t).find('p').html())
+                    if (agrs.indexOf(_tt) != -1) {
+                        setTimeout(() => { $(_answerTmpArr[i]).click() }, 300)
+                    }
+                })
+                logger('自动答题成功，准备切换下一题', 'green')
+                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                }
+            })
+            break
+        case 2:
+            getAnswer(_type, _question).then((agrs) => {
+                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                }
+            })
+            break
+        case 3:
+            getAnswer(_type, _question).then((agrs) => {
+                let _true = '正确|是|对|√|T|ri'
+                _answerTmpArr = $(TimuList[index]).find('.answerList.panduan li')
+                if (_true.indexOf(agrs) != -1) {
+                    $.each(_answerTmpArr, (i, t) => {
+                        if ($(t).attr('val-param') == 'true') {
+                            $(t).click()
+                        }
+                    })
+                } else {
+                    $.each(_answerTmpArr, (i, t) => {
+                        if ($(t).attr('val-param') == 'false') {
+                            $(t).click()
+                        }
+                    })
+                }
+                logger('自动答题成功，准备切换下一题', 'green')
+                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                }
+            })
+    }
+}
+
+function startDoPhoneCyWork(index, doms, phoneWeb) {
+    if (index == doms.length) {
+        logger('此页面全部测验已处理完毕！准备进行下一项任务')
+        setTimeout(missonStart, 5000)
+        return
+    }
+    logger('等待测验框架加载...', 'purple')
+    getElement($(doms[index]).contents()[0], 'iframe').then(element => {
+        let workIframe = element
+        if (workIframe.length == 0) {
+            setTimeout(() => { startDoPhoneCyWork(index, doms) }, 5000)
+        }
+        $(workIframe).attr('src', phoneWeb)
+        let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span:nth-child(1)').text().trim()
+        if (workStatus.indexOf("已完成") != -1) {
+            logger('测验：' + (index + 1) + ',检测到此测验已完成,准备收录答案。', 'green')
+            setTimeout(() => { upLoadWork(index, doms, workIframe) }, 5000)
+        } else if (workStatus.indexOf("待做") != -1) {
+            logger('测验：' + (index + 1) + ',准备处理此测验...', 'purple')
+            $(workIframe).attr('src', phoneWeb)
+            console.log($(doms[index]).contents()[0])
+            getElement($(doms[index]).contents()[0], '#frame_content').then((element) => {
+                setTimeout(() => { doPhoneWork($(element).contents()) }, 3000)
+            })
+        } else if (workStatus.indexOf('待批阅') != -1) {
+            _mlist.splice(0, 1)
+            _domList.splice(0, 1)
+            logger('测验：' + (index + 1) + ',测验待批阅,跳过', 'red')
+            setTimeout(() => { startDoPhoneCyWork(index, doms) }, 5000)
+        } else {
+            _mlist.splice(0, 1)
+            _domList.splice(0, 1)
+            logger('测验：' + (index + 1) + ',未知状态,跳过', 'red')
+            setTimeout(() => { startDoPhoneCyWork(index, doms) }, 5000)
+        }
+    })
+}
+
 function startDoCyWork(index, doms) {
     if (index == doms.length) {
         logger('此页面全部测验已处理完毕！准备进行下一项任务')
@@ -618,6 +778,7 @@ function getElement(parent, selector, timeout = 0) {
      * From     https://bbs.tampermonkey.net.cn
      */
     return new Promise(resolve => {
+        console.log(parent)
         let result = parent.querySelector(selector);
         if (result) return resolve(result);
         let timer;
