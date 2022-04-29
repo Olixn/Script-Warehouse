@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.3.9
+// @version             1.4.0
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -635,15 +635,16 @@ function startDoPhoneTimu(index, TimuList) {
                 let _i = _a.findIndex((item) => item == agrs)
                 if (_i == -1) {
                     logger('未匹配到正确答案，跳过此题', 'red')
-                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                    setting.sub = 0
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 } else {
                     $(_answerTmpArr[_i]).click()
                     logger('自动答题成功，准备切换下一题', 'green')
-                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
-                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
             break
@@ -657,19 +658,20 @@ function startDoPhoneTimu(index, TimuList) {
                     }
                 })
                 logger('自动答题成功，准备切换下一题', 'green')
-                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
-                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
             break
         case 2:
             getAnswer(_type, _question).then((agrs) => {
-                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                setting.sub = 0
+                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
-                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
             break
@@ -691,10 +693,10 @@ function startDoPhoneTimu(index, TimuList) {
                     })
                 }
                 logger('自动答题成功，准备切换下一题', 'green')
-                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
-                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, 5000)
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
     }
@@ -720,7 +722,6 @@ function startDoPhoneCyWork(index, doms, phoneWeb) {
         } else if (workStatus.indexOf("待做") != -1) {
             logger('测验：' + (index + 1) + ',准备处理此测验...', 'purple')
             $(workIframe).attr('src', phoneWeb)
-            console.log($(doms[index]).contents()[0])
             getElement($(doms[index]).contents()[0], '#frame_content').then((element) => {
                 setTimeout(() => { doPhoneWork($(element).contents()) }, 3000)
             })
@@ -1351,6 +1352,7 @@ function getAnswer(_t, _q) {
                         resolve(_answer)
                     } else {
                         logger('题目:' + _q + "暂无答案", 'purple')
+                        setting.sub = 0
                         reject({ 'c': 0 })
                     }
                 } else if (xhr.status == 403) {
