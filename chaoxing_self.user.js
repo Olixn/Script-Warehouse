@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.0
+// @version             1.4.1
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -445,11 +445,11 @@ function missonVideo(dom, obj) {
                                     playingTime -= 40
                                     break
                                 case 1:
-                                    logger("视频：" + res['filename'] + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
+                                    logger("视频：" + name + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
                                     break
                                 case 2:
                                     clearInterval(_loop)
-                                    logger("视频：" + res['filename'] + "检测播放完毕，准备处理下一个任务。", 'green')
+                                    logger("视频：" + name + "检测播放完毕，准备处理下一个任务。", 'green')
                                     switchMission()
                                     break
                                 default:
@@ -601,7 +601,7 @@ function startDoPhoneTimu(index, TimuList) {
                     logger('提交成功，准备切换下一个任务。', 'green')
                     _mlist.splice(0, 1)
                     _domList.splice(0, 1)
-                    setTimeout(() => { missonStart() }, 3000)
+                    setTimeout(() => { switchMission() }, 3000)
                 }, 3000)
             }, 5000)
         } else if (setting.force) {
@@ -612,7 +612,7 @@ function startDoPhoneTimu(index, TimuList) {
                     logger('提交成功，准备切换下一个任务。', 'green')
                     _mlist.splice(0, 1)
                     _domList.splice(0, 1)
-                    setTimeout(() => { missonStart() }, 3000)
+                    setTimeout(() => { switchMission() }, 3000)
                 }, 3000)
             }, 5000)
         } else {
@@ -630,7 +630,7 @@ function startDoPhoneTimu(index, TimuList) {
             getAnswer(_type, _question).then((agrs) => {
                 _answerTmpArr = $(TimuList[index]).find('.answerList.singleChoice li')
                 $.each(_answerTmpArr, (i, t) => {
-                    _a.push(tidyStr($(t).find('p').html()))
+                    _a.push(tidyStr($(t).html()).replace(/^[A-Z]\s*\n\s*/, '').trim())
                 })
                 let _i = _a.findIndex((item) => item == agrs)
                 if (_i == -1) {
@@ -650,15 +650,34 @@ function startDoPhoneTimu(index, TimuList) {
             break
         case 1:
             getAnswer(_type, _question).then((agrs) => {
-                _answerTmpArr = $(TimuList[index]).find('.answerList.multiChoice li')
-                $.each(_answerTmpArr, (i, t) => {
-                    let _tt = tidyStr($(t).find('p').html())
-                    if (agrs.indexOf(_tt) != -1) {
-                        setTimeout(() => { $(_answerTmpArr[i]).click() }, 300)
-                    }
-                })
-                logger('自动答题成功，准备切换下一题', 'green')
-                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
+                if (agrs == '暂无答案') {
+                    logger('未匹配到正确答案，跳过此题', 'red')
+                    setting.sub = 0
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
+                } else {
+                    _answerTmpArr = $(TimuList[index]).find('.answerList.multiChoice li')
+                    $.each(_answerTmpArr, (i, t) => {
+                        let _tt = tidyStr($(t).html()).replace(/^[A-Z]\s*\n\s*/, '').trim()
+                        if (agrs.indexOf(_tt) != -1) {
+                            setTimeout(() => { $(_answerTmpArr[i]).click() }, 300)
+                        }
+                    })
+                    let check = 0
+                    setTimeout(() => {
+                        $.each(_answerTmpArr, (i, t) => {
+                            if ($(t).attr('class').indexOf('cur') != -1) {
+                                check = 1
+                            }
+                        })
+                        if (check) {
+                            logger('自动答题成功，准备切换下一题', 'green')
+                        } else {
+                            logger('未能正确选择答案，请手动选择，跳过此题', 'red')
+                            setting.sub = 0
+                        }
+                        setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
+                    }, 1000)
+                }
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
@@ -677,23 +696,29 @@ function startDoPhoneTimu(index, TimuList) {
             break
         case 3:
             getAnswer(_type, _question).then((agrs) => {
-                let _true = '正确|是|对|√|T|ri'
-                _answerTmpArr = $(TimuList[index]).find('.answerList.panduan li')
-                if (_true.indexOf(agrs) != -1) {
-                    $.each(_answerTmpArr, (i, t) => {
-                        if ($(t).attr('val-param') == 'true') {
-                            $(t).click()
-                        }
-                    })
+                if (agrs == '暂无答案') {
+                    logger('未匹配到正确答案，跳过此题', 'red')
+                    setting.sub = 0
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 } else {
-                    $.each(_answerTmpArr, (i, t) => {
-                        if ($(t).attr('val-param') == 'false') {
-                            $(t).click()
-                        }
-                    })
+                    let _true = '正确|是|对|√|T|ri'
+                    _answerTmpArr = $(TimuList[index]).find('.answerList.panduan li')
+                    if (_true.indexOf(agrs) != -1) {
+                        $.each(_answerTmpArr, (i, t) => {
+                            if ($(t).attr('val-param') == 'true') {
+                                $(t).click()
+                            }
+                        })
+                    } else {
+                        $.each(_answerTmpArr, (i, t) => {
+                            if ($(t).attr('val-param') == 'false') {
+                                $(t).click()
+                            }
+                        })
+                    }
+                    logger('自动答题成功，准备切换下一题', 'green')
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
-                logger('自动答题成功，准备切换下一题', 'green')
-                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
@@ -1085,7 +1110,6 @@ function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime
                 url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=0.9&dtype=Video&_t=' + String(Math.round(new Date())),
                 type: 'GET',
                 success: function (res) {
-                    console.log(res)
                     try {
                         if (res['isPassed']) {
                             if (setting.review && playingTime != duration) {
