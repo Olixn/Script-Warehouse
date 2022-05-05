@@ -7,7 +7,7 @@ from io import BytesIO
 from fontTools.ttLib import TTFont
 import hashlib
 import json
-from flask import current_app
+import os
 
 
 app = Flask(__name__)
@@ -29,7 +29,7 @@ def decryptFont():
         data = {
             'code': 0,
             'msg': 'error!',
-            't':  str(float(end_time - start_time) * 1000.0) + "ms"
+            't':  str(float(end_time - start_time) * 1000.0) + "ms",
         }
         return jsonify(data)
     else:
@@ -40,7 +40,8 @@ def decryptFont():
             'code': 1,
             'ef': ef,
             'df': df,
-            "t": str(float(end_time - start_time) * 1000.0) + "ms"
+            "t": str(float(end_time - start_time) * 1000.0) + "ms",
+            'msg': "QAQ"
         }
         return jsonify(data)
 
@@ -78,6 +79,8 @@ def decrypt(s, b):
         j = (hex(ord(i)).replace("0x", "")).upper()
         if("uni"+j in keys_list):
             s = s.replace(i, keys_list["uni"+j])
+    os.remove("./tmp/" + fileName + ".xml")
+    os.remove("./tmp/" + fileName + ".ttf")
     return s
 
 
