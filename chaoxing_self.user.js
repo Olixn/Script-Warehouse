@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.1
+// @version             1.4.2
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -422,7 +422,8 @@ function missonVideo(dom, obj) {
                         dtoken = res['dtoken'],
                         clipTime = '0_' + duration,
                         playingTime = 0,
-                        isdrag = 0;
+                        isdrag = 0,
+                        rt = 0.9;
                     if (setting.rate == 0) {
                         logger('已开启视频秒过，可能会导致进度重置、挂科等问题。', 'red')
                     } else if (setting.rate > 1 && setting.rate <= 16) {
@@ -432,6 +433,18 @@ function missonVideo(dom, obj) {
                         logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
                     }
                     logger("视频：" + name + "开始播放")
+                    updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, rt).then((status) => {
+                        switch (status) {
+                            case 1:
+                                logger("视频：" + name + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
+                                break
+                            case 3:
+                                rt = 1
+                                break
+                            default:
+                                console.log(status)
+                        }
+                    })
                     let _loop = setInterval(() => {
                         playingTime += 40 * setting.rate
                         if (playingTime >= duration || setting.rate == 0) {
@@ -439,7 +452,7 @@ function missonVideo(dom, obj) {
                             playingTime = duration
                             isdrag = 4
                         }
-                        updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag).then((status) => {
+                        updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, rt).then((status) => {
                             switch (status) {
                                 case 0:
                                     playingTime -= 40
@@ -451,6 +464,10 @@ function missonVideo(dom, obj) {
                                     clearInterval(_loop)
                                     logger("视频：" + name + "检测播放完毕，准备处理下一个任务。", 'green')
                                     switchMission()
+                                    break
+                                case 3:
+                                    playingTime -= 40
+                                    rt = 1
                                     break
                                 default:
                                     console.log(status)
@@ -1103,13 +1120,14 @@ function refreshCourseList() {
 
 }
 
-function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag) {
+function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, rt) {
     return new Promise((resolve, reject) => {
         getEnc(classId, userId, jobId, objectId, playingTime, duration, clipTime).then((enc) => {
             $.ajax({
-                url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=0.9&dtype=Video&_t=' + String(Math.round(new Date())),
+                url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=' + rt + '&dtype=Video&_t=' + String(Math.round(new Date())),
                 type: 'GET',
                 success: function (res) {
+                    console.log(res)
                     try {
                         if (res['isPassed']) {
                             if (setting.review && playingTime != duration) {
@@ -1127,6 +1145,14 @@ function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime
                     } catch (e) {
                         logger('发生错误：' + e, 'red')
                         resolve(0)
+                    }
+                },
+                error: function (xhr) {
+                    if (xhr.status == 403) {
+                        logger('超星返回错误信息，尝试更换参数', 'red')
+                        resolve(3)
+                    } else {
+                        logger('超星返回错误信息，请联系作者', 'red')
                     }
                 }
             })
