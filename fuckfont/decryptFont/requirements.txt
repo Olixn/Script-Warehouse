@@ -1,0 +1,2 @@
+Flask==2.0.3
+fontTools==4.33.3
