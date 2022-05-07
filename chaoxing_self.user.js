@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.2
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神，感谢油猴中文网，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
+// @version             1.4.3
+// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
@@ -22,6 +22,30 @@
 // @homepage            https://script.521daigua.cn
 // @license             MIT
 // ==/UserScript==
+
+/**
+ * 感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神！
+ * 
+ * ┏┓　    ┏┓
+ * ┏┛┻━━━━━━┛┻┓
+ * ┃　　　    ┃ 　
+ * ┃    ━　   ┃
+ * ┃　┳┛　┗┳　┃
+ * ┃　　　　　┃
+ * ┃　　 ┻　  ┃
+ * ┃　　　　　┃
+ * ┗━┓　　　┏━┛
+ * ┃　　　┃ 神兽保佑　　　　　　　　
+ * ┃　　　┃ 代码无BUG！
+ * ┃　　　┗━┓
+ * ┃　　　　┣┓
+ * ┃　　　　┏┛
+ * ┗┓┓┏━┳┓┏┛
+ * ┃┫┫ ┃┫┫
+ * ┗┻┛ ┗┻┛
+ * 
+ * */
+
 
 var setting = {
     task: 0,        // 只处理任务点任务，0为关闭，1为开启
@@ -158,7 +182,6 @@ function showBox() {
     $(document).keydown(function (e) {
         if (e.keyCode == 75) {
             let show = $('#ne-21box').css('display');
-            console.log(show)
             $('#ne-21box').css('display', show == 'block' ? 'none' : 'block');
         }
     })
@@ -756,7 +779,6 @@ function startDoPhoneCyWork(index, doms, phoneWeb) {
         if (workIframe.length == 0) {
             setTimeout(() => { startDoPhoneCyWork(index, doms) }, 5000)
         }
-        $(workIframe).attr('src', phoneWeb)
         let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span:nth-child(1)').text().trim()
         if (workStatus.indexOf("已完成") != -1) {
             logger('测验：' + (index + 1) + ',检测到此测验已完成,准备收录答案。', 'green')
@@ -764,19 +786,19 @@ function startDoPhoneCyWork(index, doms, phoneWeb) {
         } else if (workStatus.indexOf("待做") != -1) {
             logger('测验：' + (index + 1) + ',准备处理此测验...', 'purple')
             $(workIframe).attr('src', phoneWeb)
-            getElement($(doms[index]).contents()[0], '#frame_content').then((element) => {
+            getElement($(doms[index]).contents()[0], 'iframe[src="' + phoneWeb + '"]').then((element) => {
                 setTimeout(() => { doPhoneWork($(element).contents()) }, 3000)
             })
         } else if (workStatus.indexOf('待批阅') != -1) {
             _mlist.splice(0, 1)
             _domList.splice(0, 1)
             logger('测验：' + (index + 1) + ',测验待批阅,跳过', 'red')
-            setTimeout(() => { startDoPhoneCyWork(index, doms) }, 5000)
+            setTimeout(() => { startDoPhoneCyWork(index + 1, doms, phoneWeb) }, 5000)
         } else {
             _mlist.splice(0, 1)
             _domList.splice(0, 1)
             logger('测验：' + (index + 1) + ',未知状态,跳过', 'red')
-            setTimeout(() => { startDoPhoneCyWork(index, doms) }, 5000)
+            setTimeout(() => { startDoPhoneCyWork(index + 1, doms, phoneWeb) }, 5000)
         }
     })
 }
@@ -821,7 +843,6 @@ function getElement(parent, selector, timeout = 0) {
      * From     https://bbs.tampermonkey.net.cn
      */
     return new Promise(resolve => {
-        console.log(parent)
         let result = parent.querySelector(selector);
         if (result) return resolve(result);
         let timer;
@@ -1184,7 +1205,6 @@ function upLoadWork(index, doms, dom) {
                     let _selfAnswer = ({ A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 })[$(TiMuList[i]).find('.Py_answer.clearfix > span').html().trim().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()]
                     let _answerForm = $(TiMuList[i]).find('.Zy_ulTop li')
                     let _answer = $(_answerForm[_selfAnswer]).find('a.fl').html()
-                    console.log(_answer)
                     _a['answer'] = tidyStr(_answer)
                 }
                 break
@@ -1490,8 +1510,6 @@ function startDoWork(index, doms, c, TiMuList) {
                         clearInterval(t)
                         getAnswer(_TimuType, _question).then((agrs) => {
                             let _i = _a.sort(compare('i')).findIndex((item) => item.text == agrs)
-                            console.log(_a)
-                            console.log(_i)
                             if (_i == -1) {
                                 logger('未匹配到正确答案，跳过', 'red')
                                 setting.sub = 0
@@ -1591,8 +1609,13 @@ function switchMission() {
 }
 
 function tidyStr(s) {
-    let str = s.replace(/<(?!img).*?>/g, "").replace(/^【.*?】\s*/, '').replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, '').trim().replace(/&nbsp;/g, '').replace('javascript:void(0);', '').replace(new RegExp("&nbsp;", ("gm")), '').replace(/^\s+/, '').replace(/\s+$/, '');
-    return str
+    if (s) {
+        let str = s.replace(/<(?!img).*?>/g, "").replace(/^【.*?】\s*/, '').replace(/\s*（\d+\.\d+分）$/, '').replace(/^\d+[\.、]/, '').trim().replace(/&nbsp;/g, '').replace('javascript:void(0);', '').replace(new RegExp("&nbsp;", ("gm")), '').replace(/^\s+/, '').replace(/\s+$/, '');
+        return str
+    } else {
+        return null
+    }
+
 }
 
 
