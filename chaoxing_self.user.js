@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.3
+// @version             1.4.4
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -26,29 +26,28 @@
 /**
  * 感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神！
  * 
- * ┏┓　    ┏┓
- * ┏┛┻━━━━━━┛┻┓
- * ┃　　　    ┃ 　
- * ┃    ━　   ┃
- * ┃　┳┛　┗┳　┃
- * ┃　　　　　┃
- * ┃　　 ┻　  ┃
- * ┃　　　　　┃
- * ┗━┓　　　┏━┛
+ * ┏┓　  ┏┓
+ * ┏┛┻━━━━┛┻┓
+ * ┃　　　  ┃ 　
+ * ┃　━     ┃
+ * ┃┳┛　┗┳　┃
+ * ┃　　　　┃
+ * ┃　┻　   ┃
+ * ┃　　　　┃
+ * ┗━┓　　┏━┛
  * ┃　　　┃ 神兽保佑　　　　　　　　
- * ┃　　　┃ 代码无BUG！
- * ┃　　　┗━┓
- * ┃　　　　┣┓
+ * ┃　　　┃ 代码无BUG！ 
+ * ┃　　　┗━━━┓
+ * ┃　　　　　┣┓
  * ┃　　　　┏┛
  * ┗┓┓┏━┳┓┏┛
  * ┃┫┫ ┃┫┫
  * ┗┻┛ ┗┻┛
- * 
  * */
 
 
 var setting = {
-    task: 0,        // 只处理任务点任务，0为关闭，1为开启
+    task: 1,        // 只处理任务点任务，0为关闭，1为开启
 
     video: 1,       // 处理视频，0为关闭，1为开启
     rate: 1,        // 视频倍速，0为秒过，1为正常速率，最高16倍
@@ -259,7 +258,7 @@ function autoLogin() {
 async function fuckCxFont(dom, selector) {
     $(dom).find(selector).prepend(`<style type="text/css">@font-face` + fuckFont + `!important; }</style>`)
     let tmp = $(dom).find(selector)
-    let suit = $(tmp).css('padding', '4px').css('letter-spacing', '8px').css('line-height', '50px').css('font-size', '32px')
+    let suit = $(tmp).attr('style', '').css('padding', '4px').css('letter-spacing', '8px').css('font-size', '32px').css('padding-bottom', '50px')
     let text = await OCR(suit[0])
     text = text.replace(/ /g, '').replace(/\n/g, '').replace(/]/, '】').replace(/,/g, '，').replace(/:/g, '：')
     return text
@@ -614,9 +613,13 @@ function missonWork(dom, obj) {
         isDo = true
     }
     if (isDo) {
-        var phoneWeb = _l.protocol + '//' + _l.host + '/work/phone/work?workId=' + obj['jobid'].replace('work-', '') + '&courseId=' + _defaults['courseid'] + '&clazzId=' + _defaults['clazzId'] + '&knowledgeId=' + _defaults['knowledgeid'] + '&jobId=' + obj['jobid'] + '&enc=' + obj['enc']
-        // setTimeout(() => { startDoCyWork(0, dom) }, 3000)
-        setTimeout(() => { startDoPhoneCyWork(0, dom, phoneWeb) }, 3000)
+        if (obj['jobid'] !== undefined) {
+            var phoneWeb = _l.protocol + '//' + _l.host + '/work/phone/work?workId=' + obj['jobid'].replace('work-', '') + '&courseId=' + _defaults['courseid'] + '&clazzId=' + _defaults['clazzId'] + '&knowledgeId=' + _defaults['knowledgeid'] + '&jobId=' + obj['jobid'] + '&enc=' + obj['enc']
+            // setTimeout(() => { startDoCyWork(0, dom) }, 3000)
+            setTimeout(() => { startDoPhoneCyWork(0, dom, phoneWeb) }, 3000)
+        } else {
+            setTimeout(() => { startDoCyWork(0, dom) }, 3000)
+        }
     } else {
         logger('用户设置只处理属于任务点的任务，准备处理下一个任务', 'green')
         switchMission()
@@ -1148,7 +1151,6 @@ function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime
                 url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=' + rt + '&dtype=Video&_t=' + String(Math.round(new Date())),
                 type: 'GET',
                 success: function (res) {
-                    console.log(res)
                     try {
                         if (res['isPassed']) {
                             if (setting.review && playingTime != duration) {
@@ -1283,14 +1285,15 @@ function uploadHomeWork() {
         let _answer
         let _answerTmpArr, _answerList = []
         let TiMuFull = tidyStr($(t).find('h3.mark_name').html())
-        let TiMuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[TiMuFull.match(/[(](.*?)[)]|$/)[1]]
+        let TiMuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[TiMuFull.match(/[(](.*?)[)]|$/)[1].replace(/, .*?分/, '')]
         let TiMu = TiMuFull.replace(/^[(].*?[)]|$/, '').trim()
         let _rightAns = $(t).find('.mark_answer').find('.colorGreen').text().replace(/正确答案[:：]/, '').trim()
         switch (TiMuType) {
             case 0:
                 if (_rightAns.length <= 0) {
                     _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
-                    if (_isTrue == 'marking_dui') {
+                    _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
+                    if (_isTrue == 'marking_dui' || _isZero !== '0') {
                         _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
                     } else {
                         return
@@ -1311,7 +1314,8 @@ function uploadHomeWork() {
                 _answer = []
                 if (_rightAns.length <= 0) {
                     _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
-                    if (_isTrue == 'marking_dui' || _isTrue == 'marking_bandui') {
+                    _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
+                    if (_isTrue == 'marking_dui' || _isTrue == 'marking_bandui' || _isZero !== '0') {
                         _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
                     } else {
                         return
@@ -1355,7 +1359,8 @@ function uploadHomeWork() {
             case 3:
                 if (_rightAns.length <= 0) {
                     _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
-                    if (_isTrue == 'marking_dui') {
+                    _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
+                    if (_isTrue == 'marking_dui' || _isZero !== '0') {
                         _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
                     } else {
                         let _true = '正确|是|对|√|T|ri'
