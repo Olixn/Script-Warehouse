@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.4
+// @version             1.4.5
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -444,7 +444,7 @@ function missonVideo(dom, obj) {
                         dtoken = res['dtoken'],
                         clipTime = '0_' + duration,
                         playingTime = 0,
-                        isdrag = 0,
+                        isdrag = 3,
                         rt = 0.9;
                     if (setting.rate == 0) {
                         logger('已开启视频秒过，可能会导致进度重置、挂科等问题。', 'red')
@@ -459,6 +459,7 @@ function missonVideo(dom, obj) {
                         switch (status) {
                             case 1:
                                 logger("视频：" + name + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
+                                isdrag = 0
                                 break
                             case 3:
                                 rt = 1
@@ -473,6 +474,10 @@ function missonVideo(dom, obj) {
                             clearInterval(_loop)
                             playingTime = duration
                             isdrag = 4
+                        } else if (rt = 1 && playingTime == 40 * setting.rate) {
+                            isdrag = 3
+                        } else {
+                            isdrag = 0
                         }
                         updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, rt).then((status) => {
                             switch (status) {
