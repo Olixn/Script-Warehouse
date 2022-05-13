@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.5
+// @version             1.4.6
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -47,7 +47,7 @@
 
 
 var setting = {
-    task: 1,        // 只处理任务点任务，0为关闭，1为开启
+    task: 0,        // 只处理任务点任务，0为关闭，1为开启
 
     video: 1,       // 处理视频，0为关闭，1为开启
     rate: 1,        // 视频倍速，0为秒过，1为正常速率，最高16倍
@@ -104,13 +104,7 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
             _mlist = $.parseJSON(params)['attachments']
             _defaults = $.parseJSON(params)['defaults']
             $.each($('#iframe').contents().find('.wrap .ans-cc .ans-attach-ct'), (i, t) => {
-                if (!setting.task && $(t).find('iframe')[0] != undefined) {
-                    _domList.push($(t).find('iframe'))
-                } else {
-                    if ($(t).find('.ans-job-icon')[0] != undefined) {
-                        _domList.push($(t).find('iframe'))
-                    }
-                }
+                _domList.push($(t).find('iframe'))
             })
             missonStart()
         }, 3000)
@@ -514,6 +508,13 @@ function missonVideo(dom, obj) {
 }
 
 function missonBook(dom, obj) {
+    if (setting.task) {
+        if (obj['jobid'] == undefined) {
+            logger("当前只处理任务点任务,跳过", 'red')
+            switchMission()
+            return
+        }
+    }
     let jobId = obj['property']['jobid'],
         name = obj['property']['bookname'],
         jtoken = obj['jtoken'],
@@ -545,6 +546,13 @@ function missonLive(dom, obj) {
 }
 
 function missonDoucument(dom, obj) {
+    if (setting.task) {
+        if (obj['jobid'] == undefined) {
+            logger("当前只处理任务点任务,跳过", 'red')
+            switchMission()
+            return
+        }
+    }
     let jobId = obj['property']['jobid'],
         name = obj['property']['name'],
         jtoken = obj['jtoken'],
@@ -573,6 +581,13 @@ function missonDoucument(dom, obj) {
 }
 
 function missonRead(dom, obj) {
+    if (setting.task) {
+        if (obj['jobid'] == undefined) {
+            logger("当前只处理任务点任务,跳过", 'red')
+            switchMission()
+            return
+        }
+    }
     let jobId = obj['property']['jobid'],
         name = obj['property']['title'],
         jtoken = obj['jtoken'],
@@ -1493,8 +1508,13 @@ function startDoWork(index, doms, c, TiMuList) {
                     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
                 }, 3000)
             }, 5000)
+        } else if (!setting.task){
+            logger('此测验不属于任务点，准备跳过。', 'red')
+            _mlist.splice(0, 1)
+            _domList.splice(0, 1)
+            setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
         } else {
-            logger('测验处理完成，存在无答案题目或用户设置不自动提交。', 'green')
+            logger('测验处理完成，存在无答案题目或者用户设置不提交。', 'red')
         }
         return
     }
