@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.7
+// @version             1.4.8
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -347,6 +347,7 @@ function toNext() {
 }
 
 function missonStart() {
+    showBox()
     if (_mlist.length <= 0) {
         logger('此页面任务处理完毕，准备跳转页面', 'green')
         return toNext()
@@ -787,6 +788,7 @@ function startDoPhoneTimu(index, TimuList) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
+            break
         case 5:
             getAnswer(_type, _question).then((agrs) => {
                 setting.sub = 0
@@ -797,6 +799,7 @@ function startDoPhoneTimu(index, TimuList) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
+            break
     }
 }
 
