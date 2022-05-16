@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.6
+// @version             1.4.7
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -685,7 +685,7 @@ function startDoPhoneTimu(index, TimuList) {
     }
     let questionFull = $(TimuList[index]).find('.Py-m1-title').html()
     let _question = tidyStr(questionFull).replace(/.*?\[.*?题\]\s*\n\s*/, '').trim()
-    let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[questionFull.match(/.*?\[(.*?)]|$/)[1]]
+    let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4, 选择题: 5 })[questionFull.match(/.*?\[(.*?)]|$/)[1]]
     let _a = []
     let _answerTmpArr
     switch (_type) {
@@ -782,6 +782,16 @@ function startDoPhoneTimu(index, TimuList) {
                     logger('自动答题成功，准备切换下一题', 'green')
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
+            }).catch((agrs) => {
+                if (agrs['c'] = 0) {
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
+                }
+            })
+        case 5:
+            getAnswer(_type, _question).then((agrs) => {
+                setting.sub = 0
+                logger('此类型题目无法区分单/多选，请手动选择答案', 'red')
+                setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
@@ -947,7 +957,10 @@ function doHomeWork(index, TiMuList) {
                     setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 } else {
                     setTimeout(() => {
-                        $(_answerTmpArr[_i]).parent().click()
+                        let check = $(_answerTmpArr[_i]).parent().find('span').attr('class')
+                        if (check.indexOf('check_answer') == -1) {
+                            $(_answerTmpArr[_i]).parent().click()
+                        }
                         logger('自动答题成功，准备切换下一题', 'green')
                         setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                     }, 300)
@@ -963,7 +976,12 @@ function doHomeWork(index, TiMuList) {
             getAnswer(_type, _question).then((agrs) => {
                 $.each(_answerTmpArr, (i, t) => {
                     if (agrs.indexOf(tidyStr($(t).html())) != -1) {
-                        setTimeout(() => { $(_answerTmpArr[i]).parent().click() }, 300)
+                        setTimeout(() => {
+                            let check = $(_answerTmpArr[i]).parent().find('span').attr('class')
+                            if (check.indexOf('check_answer_dx') == -1) {
+                                $(_answerTmpArr[i]).parent().click()
+                            }
+                        }, 300)
                     }
                 })
                 logger('自动答题成功，准备切换下一题', 'green')
@@ -1008,7 +1026,12 @@ function doHomeWork(index, TiMuList) {
                     setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                     return
                 }
-                setTimeout(() => { $(_answerTmpArr[_i]).parent().click() }, 300)
+                setTimeout(() => {
+                    let check = $(_answerTmpArr[_i]).parent().find('span').attr('class')
+                    if (check.indexOf('check_answer') == -1) {
+                        $(_answerTmpArr[_i]).parent().click()
+                    }
+                }, 300)
                 logger('自动答题成功，准备切换下一题', 'green')
                 setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
             })
@@ -1508,7 +1531,7 @@ function startDoWork(index, doms, c, TiMuList) {
                     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
                 }, 3000)
             }, 5000)
-        } else if (!setting.task){
+        } else if (!setting.task) {
             logger('此测验不属于任务点，准备跳过。', 'red')
             _mlist.splice(0, 1)
             _domList.splice(0, 1)
