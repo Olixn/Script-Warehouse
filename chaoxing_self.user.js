@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.9
+// @version             1.5.0
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -421,8 +421,8 @@ function missonVideo(dom, obj) {
                         dtoken = res['dtoken'],
                         clipTime = '0_' + duration,
                         playingTime = 0,
-                        isdrag = 3,
-                        rt = '0.9';
+                        isdrag = 3;
+                    var _rt = 0.9;
                     if (setting.rate == 0) {
                         logger('已开启视频秒过，可能会导致进度重置、挂科等问题。', 'red')
                     } else if (setting.rate > 1 && setting.rate <= 16) {
@@ -432,14 +432,14 @@ function missonVideo(dom, obj) {
                         logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
                     }
                     logger("视频：" + name + "开始播放")
-                    updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, rt).then((status) => {
+                    updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
                         switch (status) {
                             case 1:
                                 logger("视频：" + name + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
                                 isdrag = 0
                                 break
                             case 3:
-                                rt = '1'
+                                _rt = 1
                                 break
                             default:
                                 console.log(status)
@@ -456,7 +456,7 @@ function missonVideo(dom, obj) {
                         } else {
                             isdrag = 0
                         }
-                        updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, rt).then((status) => {
+                        updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
                             switch (status) {
                                 case 0:
                                     playingTime -= 40
@@ -471,7 +471,7 @@ function missonVideo(dom, obj) {
                                     break
                                 case 3:
                                     playingTime -= 40
-                                    rt = '1'
+                                    _rt = Number(_rt) == 1 ? 0.9 : 1
                                     break
                                 default:
                                     console.log(status)
@@ -616,6 +616,7 @@ function missonWork(dom, obj) {
         isDo = true
     }
     if (isDo) {
+        showBox()
         if (obj['jobid'] !== undefined) {
             var phoneWeb = _l.protocol + '//' + _l.host + '/work/phone/work?workId=' + obj['jobid'].replace('work-', '') + '&courseId=' + _defaults['courseid'] + '&clazzId=' + _defaults['clazzId'] + '&knowledgeId=' + _defaults['knowledgeid'] + '&jobId=' + obj['jobid'] + '&enc=' + obj['enc']
             // setTimeout(() => { startDoCyWork(0, dom) }, 3000)
@@ -1172,11 +1173,11 @@ function refreshCourseList() {
 
 }
 
-function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, rt) {
+function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt) {
     return new Promise((resolve, reject) => {
         getEnc(classId, userId, jobId, objectId, playingTime, duration, clipTime).then((enc) => {
             $.ajax({
-                url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=' + Number(rt) + '&dtype=Video&_t=' + String(Math.round(new Date())),
+                url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=' + Number(_rt) + '&dtype=Video&_t=' + String(Math.round(new Date())),
                 type: 'GET',
                 success: function (res) {
                     try {
@@ -1558,11 +1559,11 @@ function startDoWork(index, doms, c, TiMuList) {
                     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
                 }, 3000)
             }, 5000)
-        // } else if (!setting.task) {
-        //     logger('此测验不属于任务点，准备跳过。', 'red')
-        //     _mlist.splice(0, 1)
-        //     _domList.splice(0, 1)
-        //     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
+            // } else if (!setting.task) {
+            //     logger('此测验不属于任务点，准备跳过。', 'red')
+            //     _mlist.splice(0, 1)
+            //     _domList.splice(0, 1)
+            //     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
         } else {
             logger('测验处理完成，存在无答案题目或者用户设置不提交。', 'red')
         }
