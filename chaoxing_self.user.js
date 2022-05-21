@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.4.8
+// @version             1.4.9
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -15,9 +15,12 @@
 // @grant               GM_setValue
 // @grant               GM_getValue
 // @grant               GM_info
+// @grant               GM_getResourceText
+// @require             https://cdn.jsdelivr.net/gh/photopea/Typr.js@15aa12ffa6cf39e8788562ea4af65b42317375fb/src/Typr.min.js
+// @require             https://cdn.jsdelivr.net/gh/photopea/Typr.js@f4fcdeb8014edc75ab7296bd85ac9cde8cb30489/src/Typr.U.min.js
+// @require             https://cdn.jsdelivr.net/npm/blueimp-md5@2.19.0/js/md5.min.js
+// @resource            Table https://www.forestpolice.org/ttf/2.0/table.json
 // @require             https://lib.baomitu.com/jquery/2.0.0/jquery.min.js
-// @require             https://cdn.staticfile.org/dom-to-image/2.6.0/dom-to-image.min.js
-// @require             https://cdn.staticfile.org/tesseract.js/2.1.5/tesseract.min.js
 // @supportURL          https://script.521daigua.cn/UserGuide/faq.html
 // @homepage            https://script.521daigua.cn
 // @license             MIT
@@ -68,9 +71,11 @@ var _w = unsafeWindow,
     _d = _w.document,
     $ = _w.jQuery || top.jQuery,
     UE = _w.UE,
+    Typr = Typr || window.Typr,
+    md5 = md5 || window.md5,
     _host = "https://api.gocos.cn";
 
-var _mlist, _defaults, _domList, $subBtn, $saveBtn, $frame_c, fuckFont;
+var _mlist, _defaults, _domList, $subBtn, $saveBtn, $frame_c;
 
 if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     showTips();
@@ -249,29 +254,6 @@ function autoLogin() {
     }, 3000)
 }
 
-async function fuckCxFont(dom, selector) {
-    $(dom).find(selector).prepend(`<style type="text/css">@font-face` + fuckFont + `!important; }</style>`)
-    let tmp = $(dom).find(selector)
-    let suit = $(tmp).attr('style', '').css('padding', '4px').css('letter-spacing', '8px').css('font-size', '32px').css('padding-bottom', '50px')
-    let text = await OCR(suit[0])
-    text = text.replace(/ /g, '').replace(/\n/g, '').replace(/]/, '】').replace(/,/g, '，').replace(/:/g, '：')
-    return text
-}
-
-
-async function OCR(e) {
-    const { createWorker } = Tesseract;
-    const worker = createWorker();
-    await worker.load();
-    await worker.loadLanguage('chi_sim');
-    await worker.initialize('chi_sim');
-    const el = e
-    const pngBase64 = await domtoimage.toSvg(el);
-    const { data: { text } } = await worker.recognize(pngBase64);
-    await worker.terminate();
-    return text
-}
-
 function getEnc(a, b, c, d, e, f, g) {
     return new Promise((resolve, reject) => {
         try {
@@ -440,7 +422,7 @@ function missonVideo(dom, obj) {
                         clipTime = '0_' + duration,
                         playingTime = 0,
                         isdrag = 3,
-                        rt = 0.9;
+                        rt = '0.9';
                     if (setting.rate == 0) {
                         logger('已开启视频秒过，可能会导致进度重置、挂科等问题。', 'red')
                     } else if (setting.rate > 1 && setting.rate <= 16) {
@@ -457,7 +439,7 @@ function missonVideo(dom, obj) {
                                 isdrag = 0
                                 break
                             case 3:
-                                rt = 1
+                                rt = '1'
                                 break
                             default:
                                 console.log(status)
@@ -489,7 +471,7 @@ function missonVideo(dom, obj) {
                                     break
                                 case 3:
                                     playingTime -= 40
-                                    rt = 1
+                                    rt = '1'
                                     break
                                 default:
                                     console.log(status)
@@ -1194,7 +1176,7 @@ function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime
     return new Promise((resolve, reject) => {
         getEnc(classId, userId, jobId, objectId, playingTime, duration, clipTime).then((enc) => {
             $.ajax({
-                url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=' + rt + '&dtype=Video&_t=' + String(Math.round(new Date())),
+                url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=' + Number(rt) + '&dtype=Video&_t=' + String(Math.round(new Date())),
                 type: 'GET',
                 success: function (res) {
                     try {
@@ -1218,7 +1200,7 @@ function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime
                 },
                 error: function (xhr) {
                     if (xhr.status == 403) {
-                        logger('超星返回错误信息，尝试更换参数', 'red')
+                        logger('超星返回错误信息，尝试更换参数，40s后将重试，请等待...', 'red')
                         resolve(3)
                     } else {
                         logger('超星返回错误信息，请联系作者', 'red')
@@ -1498,11 +1480,53 @@ function getAnswer(_t, _q) {
     })
 }
 
+function fuckCxFontByWyn($dom) {
+    /**
+     * Author wyn665817
+     * https://scriptcat.org/script-show-page/432
+     */
+    logger('开始解析网页加密字体...(方法来自wyn665817大神)', 'red')
+    var $tip = $frame_c.find('style:contains(font-cxsecret)');
+    if (!$tip.length) return;
+
+    var font = $tip.text().match(/base64,([\w\W]+?)'/)[1];
+    font = Typr.parse(base64ToUint8Array(font))[0];
+
+    var table = JSON.parse(GM_getResourceText('Table'));
+    var match = {};
+    for (var i = 19968; i < 40870; i++) {
+        $tip = Typr.U.codeToGlyph(font, i);
+        if (!$tip) continue;
+        $tip = Typr.U.glyphToPath(font, $tip);
+        $tip = md5(JSON.stringify($tip)).slice(24);
+        match[i] = table[$tip];
+    }
+
+    $frame_c.find('.font-cxsecret').html(function (index, html) {
+        $.each(match, function (key, value) {
+            key = String.fromCharCode(key);
+            value = String.fromCharCode(value);
+            html = html.replaceAll(key, value);
+        });
+        return html;
+    }).removeClass('font-cxsecret');
+    logger('解析网页加密字体成功。(方法来自wyn665817大神)', 'red')
+}
+
+function base64ToUint8Array(base64) {
+    var data = window.atob(base64);
+    var buffer = new Uint8Array(data.length);
+    for (var i = 0; i < data.length; ++i) {
+        buffer[i] = data.charCodeAt(i);
+    }
+    return buffer;
+}
+
 function doWork(index, doms, dom) {
-    let $CyHtml = $(dom).contents().find('.CeYan')
-    fuckFont = getStr($(dom).contents().find('head').html(), '@font-face', '!important; }')
+    $frame_c = $(dom).contents();
+    fuckCxFontByWyn()
+    let $CyHtml = $frame_c.find('.CeYan')
     let TiMuList = $CyHtml.find('.TiMu')
-    $frame_c = $(dom).contents()
     $subBtn = $CyHtml.find('.ZY_sub').find('.Btn_blue_1')
     $saveBtn = $CyHtml.find('.ZY_sub').find('.btnGray_1')
     startDoWork(index, doms, 0, TiMuList)
@@ -1534,128 +1558,113 @@ function startDoWork(index, doms, c, TiMuList) {
                     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
                 }, 3000)
             }, 5000)
-        } else if (!setting.task) {
-            logger('此测验不属于任务点，准备跳过。', 'red')
-            _mlist.splice(0, 1)
-            _domList.splice(0, 1)
-            setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
+        // } else if (!setting.task) {
+        //     logger('此测验不属于任务点，准备跳过。', 'red')
+        //     _mlist.splice(0, 1)
+        //     _domList.splice(0, 1)
+        //     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
         } else {
             logger('测验处理完成，存在无答案题目或者用户设置不提交。', 'red')
         }
         return
     }
-    logger('正在OCR题目。。。', 'green')
-    fuckCxFont(TiMuList[c], '.Zy_TItle.clearfix > div').then((text) => {
-        let questionFull = text
-        let _question = tidyStr(questionFull)
-        let _TimuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[questionFull.match(/^【(.*?)】|$/)[1]]
-        let _a = []
-        let _answerTmpArr
-        switch (_TimuType) {
-            case 0:
-                _answerTmpArr = $(TiMuList[c]).find('.Zy_ulTop li')
-                for (let i = 0; i < _answerTmpArr.length; i++) {
-                    fuckCxFont(_answerTmpArr[i], 'a').then((text) => {
-                        _a.push({ 'text': text, 'i': i })
-                    })
+    let questionFull = $(TiMuList[c]).find('.Zy_TItle.clearfix > div').html()
+    let _question = tidyStr(questionFull)
+    let _TimuType = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[questionFull.match(/^【(.*?)】|$/)[1]]
+    let _a = []
+    let _answerTmpArr
+    switch (_TimuType) {
+        case 0:
+            _answerTmpArr = $(TiMuList[c]).find('.Zy_ulTop li').find('a')
+            $.each(_answerTmpArr, (i, t) => {
+                _a.push(tidyStr($(t).html()))
+            })
+            getAnswer(_TimuType, _question).then((agrs) => {
+                let _i = _a.findIndex((item) => item == agrs)
+                if (_i == -1) {
+                    logger('未匹配到正确答案，跳过', 'red')
+                    setting.sub = 0
+                } else {
+                    $(_answerTmpArr[_i]).parent().find('input').attr('checked', 'checked')
                 }
-                let t = setInterval(() => {
-                    if (_a.length != _answerTmpArr.length) {
-                        logger('正在OCR答案。。。', 'green')
-                    } else {
-                        clearInterval(t)
-                        getAnswer(_TimuType, _question).then((agrs) => {
-                            let _i = _a.sort(compare('i')).findIndex((item) => item.text == agrs)
-                            if (_i == -1) {
-                                logger('未匹配到正确答案，跳过', 'red')
-                                setting.sub = 0
-                            } else {
-                                $(_answerTmpArr[_i]).find('input').attr('checked', 'checked')
-                            }
-                            setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
-                        }).catch((agrs) => {
-                            setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
-                        })
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            })
+            break
+        case 1:
+            _answerTmpArr = $(TiMuList[c]).find('.Zy_ulTop li').find('a')
+            getAnswer(_TimuType, _question).then((agrs) => {
+                $.each(_answerTmpArr, (i, t) => {
+                    if (agrs.indexOf(tidyStr($(t).html())) != -1) {
+                        $(_answerTmpArr[i]).parent().find('input').attr('checked', 'checked')
+                        _a.push(['A', 'B', 'C', 'D', 'E', 'F', 'G'][i])
                     }
-                }, setting.time)
-                break
-            case 1:
-                let _aa = []
-                _answerTmpArr = $(TiMuList[c]).find('.Zy_ulTop li')
-                for (let i = 0; i < _answerTmpArr.length; i++) {
-                    fuckCxFont(_answerTmpArr[i], 'a').then((text) => {
-                        _a.push({ 'text': text, 'i': i })
-                    })
+                })
+                let id = getStr($(TiMuList[c]).find('.Zy_ulTop li:nth-child(1)').attr('onclick'), 'addcheck(', ');').replace('(', '').replace(')', '')
+                if (_a.length <= 0) {
+                    logger('未匹配到正确答案，跳过', 'red')
+                    setting.sub = 0
+                } else {
+                    $(TiMuList[c]).find('.Zy_ulTop').parent().find('#answer' + id).val(_a.join(""))
                 }
-                let tt = setInterval(() => {
-                    if (_a.length != _answerTmpArr.length) {
-                        logger('正在OCR答案。。。', 'green')
-                    } else {
-                        _a.sort(compare('i'))
-                        clearInterval(tt)
-                        getAnswer(_TimuType, _question).then((agrs) => {
-                            $.each(_a, (i, t) => {
-                                if (agrs.indexOf(t['text']) != -1) {
-                                    $(_answerTmpArr[i]).click()
-                                    _aa.push(['A', 'B', 'C', 'D', 'E', 'F', 'G'][i])
-                                }
-                            })
-                            let id = getStr($(TiMuList[c]).find('.Zy_ulTop li:nth-child(1)').attr('onclick'), 'addcheck(', ');').replace('(', '').replace(')', '')
-                            if (_aa.length <= 0) {
-                                logger('未匹配到正确答案，跳过', 'red')
-                                setting.sub = 0
-                            } else {
-                                $(TiMuList[c]).find('.Zy_ulTop').parent().find('#answer' + id).val(_aa.join(""))
-                            }
-                            setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
-                        }).catch((agrs) => {
-                            setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
-                        })
-                    }
-                }, setting.time)
-                break
-            case 2:
-                let _textareaList = $(TiMuList[c]).find('.Zy_ulTk .XztiHover1')
-                getAnswer(_TimuType, _question).then((agrs) => {
-                    if (agrs == '暂无答案') {
-                        logger('填空题无答案，跳过', 'red')
-                        setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
-                    } else {
-                        let _answerList = agrs.split("#")
-                        $.each(_textareaList, (i, t) => {
-                            setTimeout(() => {
-                                $(t).find('#ueditor_' + i).contents().find('.view p').html(_answerList[i]);
-                                $(t).find('textarea').html('<p>' + _answerList[i] + '</p>')
-                            }, 300)
-                        })
-                        setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
-                    }
-                }).catch((agrs) => {
-                    setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            })
+            break
+        case 2:
+            let _textareaList = $(TiMuList[c]).find('.Zy_ulTk .XztiHover1')
+            getAnswer(_TimuType, _question).then((agrs) => {
+                let _answerList = agrs.split("#")
+                $.each(_textareaList, (i, t) => {
+                    setTimeout(() => {
+                        $(t).find('#ueditor_' + i).contents().find('.view p').html(_answerList[i]);
+                        $(t).find('textarea').html('<p>' + _answerList[i] + '</p>')
+                    }, 300)
                 })
-                break
-            case 3:
-                _answerTmpArr = $(TiMuList[c]).find('.Zy_ulBottom li')
-                let _true = '正确|是|对|√|T|ri'
-                let _false = '错误|否|错|×|F|wr'
-                getAnswer(_TimuType, _question).then((agrs) => {
-                    if (_true.indexOf(agrs) != -1) {
-                        $(TiMuList[c]).find('.Zy_ulBottom li').find('.ri').parent().find('input').attr('checked', 'checked')
-                    } else if (_false.indexOf(agrs) != -1) {
-                        $(TiMuList[c]).find('.Zy_ulBottom li').find('.wr').parent().find('input').attr('checked', 'checked')
-                    } else {
-                        logger('未匹配到正确答案，跳过', 'red')
-                        setting.sub = 0
-                    }
-                    setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
-                }).catch((agrs) => {
-                    setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            })
+            break
+        case 3:
+            _answerTmpArr = $(TiMuList[c]).find('.Zy_ulBottom li')
+            let _true = '正确|是|对|√|T|ri'
+            let _false = '错误|否|错|×|F|wr'
+            getAnswer(_TimuType, _question).then((agrs) => {
+                if (_true.indexOf(agrs) != -1) {
+                    $(TiMuList[c]).find('.Zy_ulBottom li').find('.ri').parent().find('input').attr('checked', 'checked')
+                } else if (_false.indexOf(agrs) != -1) {
+                    $(TiMuList[c]).find('.Zy_ulBottom li').find('.wr').parent().find('input').attr('checked', 'checked')
+                } else {
+                    logger('未匹配到正确答案，跳过', 'red')
+                    setting.sub = 0
+                }
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            })
+            break
+        case 4:
+            let _textareaLista = $(TiMuList[c]).find('.Zy_ulTk .XztiHover1')
+            getAnswer(_TimuType, _question).then((agrs) => {
+                if (agrs == '暂无答案') {
+                    setting.sub = 0
+                }
+                let _answerList = agrs.split("#")
+                $.each(_textareaLista, (i, t) => {
+                    setTimeout(() => {
+                        $(t).find('#ueditor_' + i).contents().find('.view p').html(_answerList[i]);
+                        $(t).find('textarea').html('<p>' + _answerList[i] + '</p>')
+                    }, 300)
                 })
-                break
-            case 4:
-                console.log(_question)
-        }
-    })
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                setTimeout(() => { startDoWork(index, doms, c + 1, TiMuList) }, setting.time)
+            })
+            break
+    }
 }
 
 function switchMission() {
