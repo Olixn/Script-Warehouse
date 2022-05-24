@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.0
+// @version             1.5.1
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -26,34 +26,14 @@
 // @license             MIT
 // ==/UserScript==
 
-/**
- * 感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神！
- * 
- * ┏┓　  ┏┓
- * ┏┛┻━━━━┛┻┓
- * ┃　　　  ┃ 　
- * ┃　━     ┃
- * ┃┳┛　┗┳　┃
- * ┃　　　　┃
- * ┃　┻　   ┃
- * ┃　　　　┃
- * ┗━┓　　┏━┛
- * ┃　　　┃ 神兽保佑　　　　　　　　
- * ┃　　　┃ 代码无BUG！ 
- * ┃　　　┗━━━┓
- * ┃　　　　　┣┓
- * ┃　　　　┏┛
- * ┗┓┓┏━┳┓┏┛
- * ┃┫┫ ┃┫┫
- * ┗┻┛ ┗┻┛
- * */
 
-
+/*********************************自定义配置区******************************************************** */
 var setting = {
     task: 0,        // 只处理任务点任务，0为关闭，1为开启
 
     video: 1,       // 处理视频，0为关闭，1为开启
-    rate: 1,        // 视频倍速，0为秒过，1为正常速率，最高16倍
+    audio: 1,       // 处理音频，0为关闭，1为开启
+    rate: 1,        // 视频/音频倍速，0为秒过，1为正常速率，最高16倍
     review: 0,      // 复习模式，0为关闭，1为开启可以补挂视频时长
 
     work: 1,        // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
@@ -65,6 +45,56 @@ var setting = {
     phone: '',      // 登录配置项：登录手机号/超星号
     password: ''    // 登录配置项：登录密码
 }
+/************************************************************************************************** */
+/**
+ * 感谢wyn665817、道总、一之哥哥、unrival、cxxjackie等大神！
+ * 
+**/
+/************************************************************************************************** */
+/*
+      quu..__
+       $$$n  `---.__
+        "$$n        `--.                          ___.---uuudP
+         `$$n           `.__.------.__     __.---'      e$$$"              .
+           "$n          -'            `-.-'            e$$"              .'|
+             ".                                       e$"             _.'  |
+               `.   /                              ..."             .'     |
+                 `./                           ..::-'            _.'       |
+                  /                         .:::-'            .-'         .'
+                 :                          ::''\          _.'            |
+                .' .-.             .-.           `.      .'               |
+                : /'$$|           .@"$\           `.   .'              _.-'
+               .'|$u$$|          |$$,$$|           |  <            _.-'
+               | `:$$:'          :$$$$$:           `.  `.       .-'
+               :                  `"--'             |    `-.     \
+              :##.       ==             .###.       `.      `.    `\
+              |##:                      :###:        |        >     >
+              |#'     `..'`..'          `###'        x:      /     /
+               \                                   xXX|     /    ./
+                \                                xXXX'|    /   ./
+                /`-.                                  `.  /   /
+               :    `-  ...........,                   | /  .'
+               |         ``:::::::'       .            |<    `.
+               |             ```          |           x| \ `.:``.
+               |                         .'    /'   xXX|  `:`M`M':.
+               |    |                    ;    /:' xXXX'|  -'MM11M:'
+               `.  .'                   :    /:'       |-'M22M.-'
+                |  |                   .'   /'        .'MMM.-'
+                `'`'                   :  ,'          |MMM<
+                  |                     `'            |ne21\
+                   \                                  :MM.-'
+                    \                 |              .''
+                     \.               `.            /
+                      /     .:::::::.. :           /
+                     |     .:::::::::::`.         /
+                     |   .:::------------\       /
+                    /   .''               >::'  /
+                    `',:                 :    .'
+                                         `:.:'
+                    Author Ne-21
+      */
+/************************************************************************************************** */
+
 
 var _w = unsafeWindow,
     _l = location,
@@ -254,33 +284,6 @@ function autoLogin() {
     }, 3000)
 }
 
-function getEnc(a, b, c, d, e, f, g) {
-    return new Promise((resolve, reject) => {
-        try {
-            GM_xmlhttpRequest({
-                url: _host + "/index.php/cxapi/out/enc?a=" + a + '&b=' + b + '&c=' + c + '&d=' + d + '&e=' + e + '&f=' + f + '&g=' + g,
-                method: 'GET',
-                timeout: 3000,
-                onload: function (xhr) {
-                    let res = $.parseJSON(xhr.responseText)
-                    if (res['code'] == 1) {
-                        enc = res['enc']
-                        if (enc.length != 32) {
-                            logger('获取enc出错！' + enc, 'red')
-                            reject()
-                        } else {
-                            resolve(enc)
-                        }
-                    }
-                }
-            })
-        } catch (e) {
-            logger('获取enc出错！' + e, 'red')
-            reject()
-        }
-    })
-}
-
 function toNext() {
     refreshCourseList().then((res) => {
         if (setting.review || !setting.work) {
@@ -342,9 +345,19 @@ function missonStart() {
     }
     switch (_type) {
         case "video":
-            logger('开始处理视频', 'purple')
-            missonVideo(_dom, _task)
-            break
+            if (_mlist[0]['property']['module'] == 'insertvideo') {
+                logger('开始处理视频', 'purple')
+                missonVideo(_dom, _task)
+                break
+            } else if (_mlist[0]['property']['module'] == 'insertaudio') {
+                logger('开始处理音频', 'purple')
+                missonAudio(_dom, _task)
+                break
+            } else {
+                logger('未知类型任务，请联系作者，跳过', 'red')
+                switchMission()
+                break
+            }
         case "workid":
             logger('开始处理测验', 'purple')
             missonWork(_dom, _task)
@@ -371,6 +384,123 @@ function missonStart() {
                 switchMission()
             }
 
+    }
+}
+
+
+function missonAudio(dom, obj) {
+    if (!setting.audio) {
+        logger('用户设置不处理音频任务，准备开始下一个任务。', 'red')
+        setTimeout(() => { switchMission() }, 3000)
+        return
+    }
+    let isDo;
+    if (setting.task) {
+        logger("当前只处理任务点任务", 'red')
+        if (obj['jobid'] == undefined ? false : true) {
+            isDo = true
+        } else {
+            isDo = false
+        }
+    } else {
+        logger("当前默认处理所有任务（包括非任务点任务）", 'red')
+        isDo = true
+    }
+    if (isDo) {
+        let classId = _defaults['clazzId'],
+            userId = _defaults['userid'],
+            fid = _defaults['fid'],
+            reportUrl = _defaults['reportUrl'],
+            isPassed = obj['isPassed'],
+            otherInfo = obj['otherInfo'],
+            jobId = obj['property']['_jobid'],
+            name = obj['property']['name'],
+            objectId = obj['property']['objectid'];
+        let ifs = $(dom).attr('style');
+        $(dom).contents().find('body').find('.main').attr('style', 'visibility:hidden;')
+        $(dom).contents().find('body').prepend('<img src="https://pic.521daigua.cn/bg.jpg!/format/webp" style="' + ifs + 'display:block;width:100%;"/>')
+        if (!setting.review && isPassed == true) {
+            logger('音频：' + name + '检测已完成，准备处理下一个任务', 'green')
+            switchMission()
+            return
+        } else if (setting.review) {
+            logger('已开启复习模式，开始处理音频：' + name, 'pink')
+        }
+        $.ajax({
+            url: _l.protocol + '//' + _l.host + "/ananas/status/" + objectId + '?k=' + fid + '&flag=normal&_dc=' + String(Math.round(new Date())),
+            type: "GET",
+            success: function (res) {
+                try {
+                    let duration = res['duration'],
+                        dtoken = res['dtoken'],
+                        clipTime = '0_' + duration,
+                        playingTime = 0,
+                        isdrag = 3;
+                    var _rt = 0.9;
+                    if (setting.rate == 0) {
+                        logger('已开启音频秒过，可能会导致进度重置、挂科等问题。', 'red')
+                    } else if (setting.rate > 1 && setting.rate <= 16) {
+                        logger('已开启音频倍速，当前倍速：' + setting.rate + ',可能会导致进度重置、挂科等问题。', 'red')
+                    } else if (setting.rate > 16) {
+                        setting.rate = 1
+                        logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
+                    }
+                    logger("音频：" + name + "开始播放")
+                    updateAudio(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
+                        switch (status) {
+                            case 1:
+                                logger("音频：" + name + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
+                                isdrag = 0
+                                break
+                            case 3:
+                                _rt = 1
+                                break
+                            default:
+                                console.log(status)
+                        }
+                    })
+                    let _loop = setInterval(() => {
+                        playingTime += 40 * setting.rate
+                        if (playingTime >= duration || setting.rate == 0) {
+                            clearInterval(_loop)
+                            playingTime = duration
+                            isdrag = 4
+                        } else if (rt = 1 && playingTime == 40 * setting.rate) {
+                            isdrag = 3
+                        } else {
+                            isdrag = 0
+                        }
+                        updateAudio(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
+                            switch (status) {
+                                case 0:
+                                    playingTime -= 40
+                                    break
+                                case 1:
+                                    logger("音频：" + name + "已播放" + String((playingTime / duration) * 100).slice(0, 4) + '%', 'purple')
+                                    break
+                                case 2:
+                                    clearInterval(_loop)
+                                    logger("音频：" + name + "检测播放完毕，准备处理下一个任务。", 'green')
+                                    switchMission()
+                                    break
+                                case 3:
+                                    playingTime -= 40
+                                    _rt = Number(_rt) == 1 ? 0.9 : 1
+                                    break
+                                default:
+                                    console.log(status)
+                            }
+                        })
+                    }, 40000)
+                } catch (e) {
+                    logger('发生错误：' + e, 'red')
+                }
+            }
+        });
+    } else {
+        logger('用户设置只处理属于任务点的任务，准备处理下一个任务', 'green')
+        switchMission()
+        return
     }
 }
 
@@ -783,6 +913,11 @@ function startDoPhoneTimu(index, TimuList) {
                 }
             })
             break
+        default:
+            logger('暂不支持处理此类型题目：' + questionFull.match(/.*?\[(.*?)]|$/)[1] + ',跳过！请手动作答。', 'red')
+            setting.sub = 0
+            setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
+            break
     }
 }
 
@@ -1173,6 +1308,45 @@ function refreshCourseList() {
 
 }
 
+function updateAudio(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt) {
+    return new Promise((resolve, reject) => {
+        getEnc(classId, userId, jobId, objectId, playingTime, duration, clipTime).then((enc) => {
+            $.ajax({
+                url: reportUrl + '/' + dtoken + '?clazzId=' + classId + '&playingTime=' + playingTime + '&duration=' + duration + '&clipTime=' + clipTime + '&objectId=' + objectId + '&otherInfo=' + otherInfo + '&jobid=' + jobId + '&userid=' + userId + '&isdrag=' + isdrag + '&view=pc&enc=' + enc + '&rt=' + Number(_rt) + '&dtype=Audio&_t=' + String(Math.round(new Date())),
+                type: 'GET',
+                success: function (res) {
+                    try {
+                        if (res['isPassed']) {
+                            if (setting.review && playingTime != duration) {
+                                resolve(1)
+                            } else {
+                                resolve(2)
+                            }
+                        } else {
+                            if (setting.rate == 0 && playingTime == duration) {
+                                resolve(2)
+                            } else {
+                                resolve(1)
+                            }
+                        }
+                    } catch (e) {
+                        logger('发生错误：' + e, 'red')
+                        resolve(0)
+                    }
+                },
+                error: function (xhr) {
+                    if (xhr.status == 403) {
+                        logger('超星返回错误信息，尝试更换参数，40s后将重试，请等待...', 'red')
+                        resolve(3)
+                    } else {
+                        logger('超星返回错误信息，请联系作者', 'red')
+                    }
+                }
+            })
+        })
+    })
+}
+
 function updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt) {
     return new Promise((resolve, reject) => {
         getEnc(classId, userId, jobId, objectId, playingTime, duration, clipTime).then((enc) => {
@@ -1431,6 +1605,33 @@ function uploadHomeWork() {
             } else {
                 logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
             }
+        }
+    })
+}
+
+function getEnc(a, b, c, d, e, f, g) {
+    return new Promise((resolve, reject) => {
+        try {
+            GM_xmlhttpRequest({
+                url: _host + "/index.php/cxapi/out/enc?a=" + a + '&b=' + b + '&c=' + c + '&d=' + d + '&e=' + e + '&f=' + f + '&g=' + g + '&v=' + GM_info['script']['version'],
+                method: 'GET',
+                timeout: 3000,
+                onload: function (xhr) {
+                    let res = $.parseJSON(xhr.responseText)
+                    if (res['code'] == 1) {
+                        enc = res['enc']
+                        if (enc.length != 32) {
+                            logger('获取enc出错！' + enc, 'red')
+                            reject()
+                        } else {
+                            resolve(enc)
+                        }
+                    }
+                }
+            })
+        } catch (e) {
+            logger('获取enc出错！' + e, 'red')
+            reject()
         }
     })
 }
