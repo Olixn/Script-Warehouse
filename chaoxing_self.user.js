@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.2
+// @version             1.5.3
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -9,6 +9,7 @@
 // @match               *://*.nbdlib.cn/*
 // @match               *://*.hnsyu.net/*
 // @connect             api.gocos.cn
+// @connect             api-cx.gocos.cn
 // @run-at              document-end
 // @grant               unsafeWindow
 // @grant               GM_xmlhttpRequest
@@ -16,13 +17,15 @@
 // @grant               GM_getValue
 // @grant               GM_info
 // @grant               GM_getResourceText
-// @require             https://cdn.521daigua.cn/script/Typr.U.min.js
-// @require             https://cdn.521daigua.cn/script/Typr.min.js
-// @require             https://cdn.521daigua.cn/script/md5.min.js
+// @require             https://cdn.jsdelivr.net/gh/photopea/Typr.js@15aa12ffa6cf39e8788562ea4af65b42317375fb/src/Typr.min.js
+// @require             https://cdn.jsdelivr.net/gh/photopea/Typr.js@f4fcdeb8014edc75ab7296bd85ac9cde8cb30489/src/Typr.U.min.js
+// @require             https://cdn.jsdelivr.net/npm/blueimp-md5@2.19.0/js/md5.min.js
 // @resource            Table https://www.forestpolice.org/ttf/2.0/table.json
 // @require             https://lib.baomitu.com/jquery/2.0.0/jquery.min.js
 // @supportURL          https://script.521daigua.cn/UserGuide/faq.html
 // @homepage            https://script.521daigua.cn
+// @contributionURL     https://afdian.net/@Ne_21
+// @antifeature         payment
 // @license             MIT
 // ==/UserScript==
 
@@ -103,7 +106,8 @@ var _w = unsafeWindow,
     UE = _w.UE,
     Typr = Typr || window.Typr,
     md5 = md5 || window.md5,
-    _host = "https://api.gocos.cn";
+    _host = "https://api.gocos.cn",
+    _cxhost = "https://api-cx.gocos.cn";
 
 var _mlist, _defaults, _domList, $subBtn, $saveBtn, $frame_c;
 
@@ -216,12 +220,13 @@ function showBox() {
     let _u = getCk('_uid') || getCk('UID')
     GM_xmlhttpRequest({
         method: 'GET',
-        url: _host + '/index.php/cxapi/cxtimu/notice?u=' + _u + '&v=' + GM_info['script']['version'],
+        url: _cxhost + '/notice?u=' + _u + '&v=' + GM_info['script']['version'],
         timeout: 3000,
         onload: function (xhr) {
             if (xhr.status == 200) {
                 var obj = $.parseJSON(xhr.responseText) || {};
                 var notice = obj.injection;
+                localStorage.setItem('token', obj.token ? obj.token : '')
                 $('#ne-21notice').html(notice);
             }
         },
@@ -863,7 +868,17 @@ function startDoPhoneTimu(index, TimuList) {
             break
         case 2:
             getAnswer(_type, _question).then((agrs) => {
-                setting.sub = 0
+                if (agrs == '暂无答案') {
+                    logger('未匹配到正确答案，跳过此题', 'red')
+                    setting.sub = 0
+                    setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
+                    return
+                }
+                let answers = agrs.split('#')
+                let tkList = $(TimuList[index]).find('.blankList2 input')
+                $.each(tkList, (i, t) => {
+                    setTimeout(() => { $(t).val(answers[i]) }, 200)
+                })
                 setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
             }).catch((agrs) => {
                 if (agrs['c'] = 0) {
@@ -1613,9 +1628,12 @@ function getEnc(a, b, c, d, e, f, g) {
     return new Promise((resolve, reject) => {
         try {
             GM_xmlhttpRequest({
-                url: _host + "/index.php/cxapi/out/enc?a=" + a + '&b=' + b + '&c=' + c + '&d=' + d + '&e=' + e + '&f=' + f + '&g=' + g + '&v=' + GM_info['script']['version'],
+                url: _cxhost + "/cx/encode?a=" + a + '&b=' + b + '&c=' + c + '&d=' + d + '&e=' + e + '&f=' + f + '&g=' + g + '&v=' + GM_info['script']['version'],
                 method: 'GET',
                 timeout: 3000,
+                headers: {
+                    'Authorization': localStorage.getItem('token')
+                },
                 onload: function (xhr) {
                     let res = $.parseJSON(xhr.responseText)
                     if (res['code'] == 1) {
@@ -1626,6 +1644,9 @@ function getEnc(a, b, c, d, e, f, g) {
                         } else {
                             resolve(enc)
                         }
+                    } else {
+                        logger(res['msg'], 'red')
+                        reject()
                     }
                 }
             })
@@ -1642,9 +1663,10 @@ function getAnswer(_t, _q) {
         let _u = getCk('_uid') || getCk('UID')
         GM_xmlhttpRequest({
             method: 'POST',
-            url: _host + '/index.php/cxapi/cxtimu/getanswer?v=3',
+            url: _cxhost + '/cx/getanswer',
             headers: {
                 'Content-type': 'application/x-www-form-urlencoded',
+                'Authorization': localStorage.getItem('token')
             },
             data: 'question=' + encodeURIComponent(_q) + '&u=' + _u,
             timeout: setting.time,
@@ -1655,6 +1677,10 @@ function getAnswer(_t, _q) {
                     if (obj.code) {
                         logger('题目:' + _q + "|答案:" + _answer, 'purple')
                         resolve(_answer)
+                    } else if (obj.msg) {
+                        logger(obj.msg, 'red')
+                        setting.sub = 0
+                        reject({ 'c': 0 })
                     } else {
                         logger('题目:' + _q + "暂无答案", 'purple')
                         setting.sub = 0
@@ -1882,7 +1908,6 @@ function tidyStr(s) {
     } else {
         return null
     }
-
 }
 
 
