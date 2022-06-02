@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.3
+// @version             1.5.4
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -825,7 +825,7 @@ function startDoPhoneTimu(index, TimuList) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
@@ -861,7 +861,7 @@ function startDoPhoneTimu(index, TimuList) {
                     }, 1000)
                 }
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
@@ -881,7 +881,7 @@ function startDoPhoneTimu(index, TimuList) {
                 })
                 setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
@@ -912,7 +912,7 @@ function startDoPhoneTimu(index, TimuList) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
@@ -923,7 +923,7 @@ function startDoPhoneTimu(index, TimuList) {
                 logger('此类型题目无法区分单/多选，请手动选择答案', 'red')
                 setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { startDoPhoneTimu(index + 1, TimuList) }, setting.time)
                 }
             })
@@ -1102,7 +1102,7 @@ function doHomeWork(index, TiMuList) {
                     }, 300)
                 }
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 }
             })
@@ -1123,7 +1123,7 @@ function doHomeWork(index, TiMuList) {
                 logger('自动答题成功，准备切换下一题', 'green')
                 setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 }
             })
@@ -1139,7 +1139,7 @@ function doHomeWork(index, TiMuList) {
                 logger('自动答题成功，准备切换下一题', 'green')
                 setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 }
             })
@@ -1170,6 +1170,10 @@ function doHomeWork(index, TiMuList) {
                 }, 300)
                 logger('自动答题成功，准备切换下一题', 'green')
                 setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
+            }).catch((agrs) => {
+                if (agrs['c'] == 0) {
+                    setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
+                }
             })
             break
         case 4:
@@ -1182,7 +1186,7 @@ function doHomeWork(index, TiMuList) {
                 logger('自动答题成功，准备切换下一题', 'green')
                 setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     setTimeout(() => { doHomeWork(index + 1, TiMuList) }, setting.time)
                 }
             })
@@ -1225,7 +1229,7 @@ function missonExam() {
                     }, 300)
                 }
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     toNextExam()
                 }
             })
@@ -1246,7 +1250,7 @@ function missonExam() {
                     toNextExam()
                 }
             }).catch((agrs) => {
-                if (agrs['c'] = 0) {
+                if (agrs['c'] == 0) {
                     toNextExam()
                 }
             })
@@ -1291,6 +1295,10 @@ function missonExam() {
                     toNextExam()
                 } else {
                     logger('此题已作答，准备切换下一题', 'green')
+                    toNextExam()
+                }
+            }).catch((agrs) => {
+                if (agrs['c'] == 0) {
                     toNextExam()
                 }
             })
@@ -1682,7 +1690,7 @@ function getAnswer(_t, _q) {
                         setting.sub = 0
                         reject({ 'c': 0 })
                     } else {
-                        logger('题目:' + _q + "暂无答案", 'purple')
+                        logger('题目:' + _q + "|暂无答案", 'red')
                         setting.sub = 0
                         reject({ 'c': 0 })
                     }
