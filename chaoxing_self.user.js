@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.4
+// @version             1.5.5
 // @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -161,8 +161,22 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     // 强制体验新版，防止出现一些睿智问题
     $('.navshow').find('a:contains(体验新版)')[0] ? $('.navshow').find('a:contains(体验新版)')[0].click() : '';
 } else if (_l.pathname == '/work/phone/doHomeWork') {
+    // FUCK ALERT
+    _oldal = _w.alert
+    _w.alert = function (msg) {
+        if (msg == '保存成功') {
+            return;
+        }
+        return _oldal(msg)
+    }
     // FUCK CONFIRM ALERT
-    _w.confirm = function () { return true }
+    _oldcf = _w.confirm
+    _w.confirm = function (msg) {
+        if (msg == '确认提交？' || msg.includes('未做完')) {
+            return true
+        }
+        return _oldcf(msg)
+    }
 } else {
     console.log(_l.pathname)
 }
@@ -769,6 +783,7 @@ function missonWork(dom, obj) {
 function doPhoneWork($dom) {
     let $cy = $dom.find('.Wrappadding form')
     $subBtn = $cy.find('.zquestions .zsubmit .btn-ok-bottom')
+    $saveBtn = $cy.find('.zquestions .zsubmit .btn-save')
     let TimuList = $cy.find('.zquestions .Py-mian1')
     startDoPhoneTimu(0, TimuList)
 }
@@ -798,7 +813,16 @@ function startDoPhoneTimu(index, TimuList) {
                 }, 3000)
             }, 5000)
         } else {
-            logger('测验处理完成，存在无答案题目或用户设置不自动提交。', 'green')
+            logger('测验处理完成，存在无答案题目或用户设置不自动提交，自动保存！', 'green')
+            setTimeout(() => {
+                $saveBtn.click()
+                setTimeout(() => {
+                    logger('保存成功，准备切换下一个任务。', 'green')
+                    _mlist.splice(0, 1)
+                    _domList.splice(0, 1)
+                    setTimeout(() => { switchMission() }, 3000)
+                }, 3000)
+            }, 5000)
         }
         return
     }
@@ -951,7 +975,7 @@ function startDoPhoneCyWork(index, doms, phoneWeb) {
         let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span:nth-child(1)').text().trim()
         if (workStatus.indexOf("已完成") != -1) {
             logger('测验：' + (index + 1) + ',检测到此测验已完成,准备收录答案。', 'green')
-            setTimeout(() => { upLoadWork(index, doms, workIframe) }, 5000)
+            setTimeout(() => { upLoadWork(index, doms, workIframe) }, 2000)
         } else if (workStatus.indexOf("待做") != -1) {
             logger('测验：' + (index + 1) + ',准备处理此测验...', 'purple')
             $(workIframe).attr('src', phoneWeb)
@@ -987,7 +1011,7 @@ function startDoCyWork(index, doms) {
         let workStatus = $(workIframe).contents().find('.CeYan .ZyTop h3 span:nth-child(1)').text().trim()
         if (workStatus.indexOf("已完成") != -1) {
             logger('测验：' + (index + 1) + ',检测到此测验已完成,准备收录答案。', 'green')
-            setTimeout(() => { upLoadWork(index, doms, workIframe) }, 5000)
+            setTimeout(() => { upLoadWork(index, doms, workIframe) }, 2000)
         } else if (workStatus.indexOf("待做") != -1) {
             logger('测验：' + (index + 1) + ',准备处理此测验...', 'purple')
             setTimeout(() => { doWork(index, doms, workIframe) }, 5000)
@@ -1463,11 +1487,15 @@ function upLoadWork(index, doms, dom) {
                 break
             case 3:
                 if (_selfAnswerCheck == "fr dui") {
-                    let _answer = $(TiMuList[i]).find('.Py_answer.clearfix > span > i').html().trim().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()
+                    let _answer = $(TiMuList[i]).find('.Py_answer.clearfix > span > i').html().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()
                     _a['answer'] = tidyStr(_answer)
                 } else {
-                    let _answer = $(TiMuList[i]).find('.Py_answer.clearfix > span > i').html().trim().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()
-                    _a['answer'] = (tidyStr(_answer) == '√' ? 'x' : '√')
+                    if ($(TiMuList[i]).find('.Py_answer.clearfix > span > i').html()) {
+                        let _answer = $(TiMuList[i]).find('.Py_answer.clearfix > span > i').html().replace(/正确答案[:：]/, '').replace(/我的答案[:：]/, '').trim()
+                        _a['answer'] = (tidyStr(_answer) == '√' ? 'x' : '√')
+                    } else {
+                        break
+                    }
                 }
                 break
             case 4:
