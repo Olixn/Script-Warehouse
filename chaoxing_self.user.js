@@ -1,8 +1,7 @@
-42
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.6
+// @version             1.5.7
 // @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题（解密字体）、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -455,12 +454,16 @@ function missonAudio(dom, obj) {
                         isdrag = 3;
                     var _rt = 0.9;
                     if (setting.rate == 0) {
-                        logger('已开启音频秒过，可能会导致进度重置、挂科等问题。', 'red')
+                        logger('已开启音频秒过，99.9%会导致进度重置、挂科等问题。', 'red')
+                        logger('已开启音频秒过，请等待5秒！！！', 'red')
                     } else if (setting.rate > 1 && setting.rate <= 16) {
-                        logger('已开启音频倍速，当前倍速：' + setting.rate + ',可能会导致进度重置、挂科等问题。', 'red')
+                        logger('已开启音频倍速，当前倍速：' + setting.rate + ',99.9%会导致进度重置、挂科等问题。', 'red')
+                        logger('已开启音频倍速，进度40秒更新一次，请等待！', 'red')
                     } else if (setting.rate > 16) {
                         setting.rate = 1
                         logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
+                    } else {
+                        logger("音频进度每隔40秒更新一次，请等待耐心等待...",'blue')
                     }
                     logger("音频：" + name + "开始播放")
                     updateAudio(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
@@ -508,7 +511,7 @@ function missonAudio(dom, obj) {
                                     console.log(status)
                             }
                         })
-                    }, 40000)
+                    }, setting.rate == 0 ? 5000 : 40000)
                 } catch (e) {
                     logger('发生错误：' + e, 'red')
                 }
@@ -571,12 +574,16 @@ function missonVideo(dom, obj) {
                         isdrag = 3;
                     var _rt = 0.9;
                     if (setting.rate == 0) {
-                        logger('已开启视频秒过，可能会导致进度重置、挂科等问题。', 'red')
+                        logger('已开启视频秒过，99.9%会导致进度重置、挂科等问题。', 'red')
+                        logger('已开启视频秒过，请等待5秒！！！', 'red')
                     } else if (setting.rate > 1 && setting.rate <= 16) {
-                        logger('已开启视频倍速，当前倍速：' + setting.rate + ',可能会导致进度重置、挂科等问题。', 'red')
+                        logger('已开启视频倍速，当前倍速：' + setting.rate + ',99.9%会导致进度重置、挂科等问题。', 'red')
+                        logger('已开启视频倍速，进度40秒更新一次，请等待！', 'red')
                     } else if (setting.rate > 16) {
                         setting.rate = 1
                         logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
+                    } else {
+                        logger("视频进度每隔40秒更新一次，请等待耐心等待...",'blue')
                     }
                     logger("视频：" + name + "开始播放")
                     updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
@@ -624,7 +631,7 @@ function missonVideo(dom, obj) {
                                     console.log(status)
                             }
                         })
-                    }, 40000)
+                    }, setting.rate == 0 ? 5000 : 40000)
                 } catch (e) {
                     logger('发生错误：' + e, 'red')
                 }
