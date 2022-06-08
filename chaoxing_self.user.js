@@ -1,8 +1,9 @@
+42
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.5
-// @description         毕生所学，随缘更新，BUG巨多，推荐使用ScriptCat运行此脚本，仅以此献给我所热爱的事情，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题、收录答案、作业、收录作业答案、读书秒过。
+// @version             1.5.6
+// @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题（解密字体）、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
@@ -19,9 +20,10 @@
 // @grant               GM_getResourceText
 // @require             https://cdn.jsdelivr.net/gh/photopea/Typr.js@15aa12ffa6cf39e8788562ea4af65b42317375fb/src/Typr.min.js
 // @require             https://cdn.jsdelivr.net/gh/photopea/Typr.js@f4fcdeb8014edc75ab7296bd85ac9cde8cb30489/src/Typr.U.min.js
-// @require             https://cdn.jsdelivr.net/npm/blueimp-md5@2.19.0/js/md5.min.js
+// @require             https://cdn.staticfile.org/blueimp-md5/2.19.0/js/md5.min.js
+// @require             https://cdn.staticfile.org/limonte-sweetalert2/11.0.1/sweetalert2.all.min.js
+// @require             https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js
 // @resource            Table https://www.forestpolice.org/ttf/2.0/table.json
-// @require             https://lib.baomitu.com/jquery/2.0.0/jquery.min.js
 // @supportURL          https://script.521daigua.cn/UserGuide/faq.html
 // @homepage            https://script.521daigua.cn
 // @contributionURL     https://afdian.net/@Ne_21
@@ -32,6 +34,8 @@
 
 /*********************************自定义配置区******************************************************** */
 var setting = {
+    showBox: 1,     // 显示脚本浮窗，0为关闭，1为开启，不建议关闭
+
     task: 0,        // 只处理任务点任务，0为关闭，1为开启
 
     video: 1,       // 处理视频，0为关闭，1为开启
@@ -40,9 +44,12 @@ var setting = {
     review: 0,      // 复习模式，0为关闭，1为开启可以补挂视频时长
 
     work: 1,        // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
+    decrypt: 0,     // 解密加密字体，0为关闭，1为开启，目前好像cx取消加密了
     time: 5000,     // 答题时间间隔，默认5s=5000ms
     sub: 1,         // 测验自动提交，0为关闭,1为开启，当没答案时测验将不会提交，如需提交请设置force：1
     force: 0,       // 测验强制提交，0为关闭，1为开启，开启此功能将会强制提交测验（无论作答与否）
+
+    examTurn: 1,     // 考试自动跳转下一题，0为关闭，1为开启
 
     autoLogin: 0,   // 自动登录，0为关闭，1为开启，开启此功能请配置登陆配置项
     phone: '',      // 登录配置项：登录手机号/超星号
@@ -106,20 +113,20 @@ var _w = unsafeWindow,
     UE = _w.UE,
     Typr = Typr || window.Typr,
     md5 = md5 || window.md5,
+    Swal = Swal || window.Swal,
     _host = "https://api.gocos.cn",
     _cxhost = "https://api-cx.gocos.cn";
 
 var _mlist, _defaults, _domList, $subBtn, $saveBtn, $frame_c;
+
+// 强制体验新版，防止出现一些睿智问题
+$('.navshow').find('a:contains(体验新版)')[0] ? $('.navshow').find('a:contains(体验新版)')[0].click() : '';
 
 if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     showTips();
 } else if (_l.pathname == '/login' && setting.autoLogin) {
     showBox()
     setTimeout(() => { autoLogin() }, 3000)
-} else if (_l.pathname == '/mycourse/stu') {
-
-} else if (_l.pathname == '/mycourse/studentstudy') {
-    showBox()
 } else if (_l.pathname == '/knowledge/cards') {
     showBox()
     if ($("html").html().indexOf("章节未开放！") != -1 && _l.href.indexOf("ut=s") != -1) {
@@ -157,9 +164,6 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
 } else if (_l.pathname == '/mooc2/work/view') {
     showBox()
     setTimeout(() => { uploadHomeWork() }, 3000)
-} else if (_l.pathname == '/mycourse/studentcourse') {
-    // 强制体验新版，防止出现一些睿智问题
-    $('.navshow').find('a:contains(体验新版)')[0] ? $('.navshow').find('a:contains(体验新版)')[0].click() : '';
 } else if (_l.pathname == '/work/phone/doHomeWork') {
     // FUCK ALERT
     _oldal = _w.alert
@@ -177,6 +181,8 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
         }
         return _oldcf(msg)
     }
+} else if (_l.pathname == '/mooc2/exam/exam-list') {
+    Swal.fire('注意：专业课可能会存在答案不全或无答案，请谨慎使用脚本考试，开始考试之前请确保该账号已激活脚本。')
 } else {
     console.log(_l.pathname)
 }
@@ -217,7 +223,7 @@ function showTips() {
 }
 
 function showBox() {
-    if ($('#ne-21notice')[0] == undefined) {
+    if (setting.showBox && $('#ne-21notice')[0] == undefined) {
         var box_html = `<div id="ne-21box" style="border: 2px dashed rgb(0, 85, 68); width: 330px; position: fixed; top: 5%; right: 20%; z-index: 99999; background-color: rgba(184, 247, 255, 1); overflow-x: auto;">
         <h3 style="text-align: center;">超星学习小助手 By Ne-21<span style="color:red;">(K键隐藏面板)</span></h3>
         <div id="ne-21notice" style="border-top: 1px solid #000;border-bottom: 1px solid #000;margin: 4px 0px;overflow: hidden;"></div>
@@ -279,14 +285,6 @@ function getTaskParams() {
 
 function getCk(name) {
     return document.cookie.match(`[;\s+]?${name}=([^;]*)`)?.pop();
-}
-
-function compare(property) {
-    return function (a, b) {
-        let value1 = a[property];
-        let value2 = b[property];
-        return value1 - value2;
-    }
 }
 
 
@@ -1333,11 +1331,15 @@ function missonExam() {
 }
 
 function toNextExam() {
-    let $_examtable = $('.mark_table').find('.whiteDiv')
-    let $nextbtn = $_examtable.find('.nextDiv a')
-    setTimeout(() => {
-        $nextbtn.click()
-    }, 2000)
+    if (setting.examTurn) {
+        let $_examtable = $('.mark_table').find('.whiteDiv')
+        let $nextbtn = $_examtable.find('.nextDiv a')
+        setTimeout(() => {
+            $nextbtn.click()
+        }, 2000)
+    } else {
+        logger('用户设置不自动跳转下一题，请手动点击', 'blue')
+    }
 }
 
 function refreshCourseList() {
@@ -1788,7 +1790,9 @@ function base64ToUint8Array(base64) {
 
 function doWork(index, doms, dom) {
     $frame_c = $(dom).contents();
-    fuckCxFontByWyn()
+    if (setting.decrypt) {
+        fuckCxFontByWyn()
+    }
     let $CyHtml = $frame_c.find('.CeYan')
     let TiMuList = $CyHtml.find('.TiMu')
     $subBtn = $CyHtml.find('.ZY_sub').find('.Btn_blue_1')
