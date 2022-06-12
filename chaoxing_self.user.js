@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.8
+// @version             1.5.9
 // @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题（解密字体）、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @icon                https://api.gocos.cn/logo.ico
@@ -464,7 +464,7 @@ function missonAudio(dom, obj) {
                         setting.rate = 1
                         logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
                     } else {
-                        logger("音频进度每隔40秒更新一次，请等待耐心等待...",'blue')
+                        logger("音频进度每隔40秒更新一次，请等待耐心等待...", 'blue')
                     }
                     logger("音频：" + name + "开始播放")
                     updateAudio(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
@@ -584,7 +584,7 @@ function missonVideo(dom, obj) {
                         setting.rate = 1
                         logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
                     } else {
-                        logger("视频进度每隔40秒更新一次，请等待耐心等待...",'blue')
+                        logger("视频进度每隔40秒更新一次，请等待耐心等待...", 'blue')
                     }
                     logger("视频：" + name + "开始播放")
                     updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
@@ -1517,24 +1517,10 @@ function upLoadWork(index, doms, dom) {
             continue
         }
     }
-    GM_xmlhttpRequest({
-        url: _host + '/index.php/cxapi/upload/newup',
-        data: 'data=' + encodeURIComponent(JSON.stringify(data)),
-        method: 'POST',
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        onload: function (xhr) {
-            let res = $.parseJSON(xhr.responseText)
-            if (res['code'] == 1) {
-                logger('答案收录成功！！准备处理下一个任务。', 'green')
-            } else {
-                logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
-            }
-            _mlist.splice(0, 1)
-            _domList.splice(0, 1)
-            setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
-        }
+    uploadAnswer(data).then(() => {
+        _mlist.splice(0, 1)
+        _domList.splice(0, 1)
+        setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
     })
 }
 
@@ -1615,10 +1601,12 @@ function uploadHomeWork() {
                 } else {
                     _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').slice(1)
                 }
-                _a['question'] = TiMu
-                _a['type'] = TiMuType
-                _a['answer'] = _answer
-                data.push(_a)
+                if (_answer.length != 0) {
+                    _a['question'] = TiMu
+                    _a['type'] = TiMuType
+                    _a['answer'] = _answer
+                    data.push(_a)
+                }
                 break
             case 3:
                 if (_rightAns.length <= 0) {
@@ -1652,23 +1640,7 @@ function uploadHomeWork() {
                 break
         }
     })
-    GM_xmlhttpRequest({
-        url: _host + '/index.php/cxapi/upload/newup',
-        data: 'data=' + encodeURIComponent(JSON.stringify(data))
-        ,
-        method: 'POST',
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        onload: function (xhr) {
-            let res = $.parseJSON(xhr.responseText)
-            if (res['code'] == 1) {
-                logger('答案收录成功！！此次收录'+res['t']+'道题目，准备处理下一个任务。', 'green')
-            } else {
-                logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
-            }
-        }
-    })
+    uploadAnswer(data);
 }
 
 function getEnc(a, b, c, d, e, f, g) {
@@ -1942,6 +1914,30 @@ function startDoWork(index, doms, c, TiMuList) {
             })
             break
     }
+}
+
+function uploadAnswer(data) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            url: _host + '/index.php/cxapi/upload/newup',
+            data: 'data=' + encodeURIComponent(JSON.stringify(data)),
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            onload: function (xhr) {
+                let res = $.parseJSON(xhr.responseText)
+                if (res['code'] == 1) {
+                    logger('答案收录成功！！此次收录' + res['t'] + '道题目，准备处理下一个任务。', 'green')
+                    resolve()
+                } else {
+                    logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
+                    resolve()
+                }
+            }
+        })
+    })
+
 }
 
 function switchMission() {
