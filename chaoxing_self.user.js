@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.7
+// @version             1.5.8
 // @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题（解密字体）、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
+// @icon                https://api.gocos.cn/logo.ico
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
 // @match               *://*.nbdlib.cn/*
@@ -1518,7 +1519,7 @@ function upLoadWork(index, doms, dom) {
     }
     GM_xmlhttpRequest({
         url: _host + '/index.php/cxapi/upload/newup',
-        data: 'data=' + JSON.stringify(data),
+        data: 'data=' + encodeURIComponent(JSON.stringify(data)),
         method: 'POST',
         headers: {
             "Content-Type": "application/x-www-form-urlencoded"
@@ -1653,7 +1654,8 @@ function uploadHomeWork() {
     })
     GM_xmlhttpRequest({
         url: _host + '/index.php/cxapi/upload/newup',
-        data: 'data=' + JSON.stringify(data),
+        data: 'data=' + encodeURIComponent(JSON.stringify(data))
+        ,
         method: 'POST',
         headers: {
             "Content-Type": "application/x-www-form-urlencoded"
@@ -1661,7 +1663,7 @@ function uploadHomeWork() {
         onload: function (xhr) {
             let res = $.parseJSON(xhr.responseText)
             if (res['code'] == 1) {
-                logger('答案收录成功！！准备处理下一个任务。', 'green')
+                logger('答案收录成功！！此次收录'+res['t']+'道题目，准备处理下一个任务。', 'green')
             } else {
                 logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
             }
