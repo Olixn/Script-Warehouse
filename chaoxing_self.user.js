@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.8
-// @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试、视频倍速\秒过、文档秒过、答题（解密字体）、收录答案、作业、收录作业答案、读书秒过。
+// @version             1.5.9
+// @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试\考试答案收录、视频倍速\秒过、文档秒过、章节测验答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @icon                https://api.gocos.cn/logo.ico
 // @match               *://*.chaoxing.com/*
@@ -18,9 +18,6 @@
 // @grant               GM_getValue
 // @grant               GM_info
 // @grant               GM_getResourceText
-// @require             https://cdn.jsdelivr.net/gh/photopea/Typr.js@15aa12ffa6cf39e8788562ea4af65b42317375fb/src/Typr.min.js
-// @require             https://cdn.jsdelivr.net/gh/photopea/Typr.js@f4fcdeb8014edc75ab7296bd85ac9cde8cb30489/src/Typr.U.min.js
-// @require             https://cdn.staticfile.org/blueimp-md5/2.19.0/js/md5.min.js
 // @require             https://cdn.staticfile.org/limonte-sweetalert2/11.0.1/sweetalert2.all.min.js
 // @require             https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js
 // @resource            Table https://www.forestpolice.org/ttf/2.0/table.json
@@ -44,7 +41,7 @@ var setting = {
     review: 0,      // 复习模式，0为关闭，1为开启可以补挂视频时长
 
     work: 1,        // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
-    decrypt: 0,     // 解密加密字体，0为关闭，1为开启，目前好像cx取消加密了
+    // decrypt: 0,     // 解密加密字体，0为关闭，1为开启，目前好像cx取消加密了
     time: 5000,     // 答题时间间隔，默认5s=5000ms
     sub: 1,         // 测验自动提交，0为关闭,1为开启，当没答案时测验将不会提交，如需提交请设置force：1
     force: 0,       // 测验强制提交，0为关闭，1为开启，开启此功能将会强制提交测验（无论作答与否）
@@ -111,8 +108,8 @@ var _w = unsafeWindow,
     _d = _w.document,
     $ = _w.jQuery || top.jQuery,
     UE = _w.UE,
-    Typr = Typr || window.Typr,
-    md5 = md5 || window.md5,
+    // Typr = Typr || window.Typr,
+    // md5 = md5 || window.md5,
     Swal = Swal || window.Swal,
     _host = "https://api.gocos.cn",
     _cxhost = "https://api-cx.gocos.cn";
@@ -158,6 +155,9 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
 } else if (_l.pathname == '/exam/test/reVersionTestStartNew') {
     showBox()
     setTimeout(() => { missonExam() }, 3000)
+} else if (_l.pathname == '/exam/test/reVersionPaperMarkContentNew') {
+    showBox()
+    setTimeout(() => { uploadExam() }, 3000)
 } else if (_l.pathname == '/mooc2/work/dowork') {
     showBox()
     setTimeout(() => { missonHomeWork() }, 3000)
@@ -464,7 +464,7 @@ function missonAudio(dom, obj) {
                         setting.rate = 1
                         logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
                     } else {
-                        logger("音频进度每隔40秒更新一次，请等待耐心等待...",'blue')
+                        logger("音频进度每隔40秒更新一次，请等待耐心等待...", 'blue')
                     }
                     logger("音频：" + name + "开始播放")
                     updateAudio(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
@@ -584,7 +584,7 @@ function missonVideo(dom, obj) {
                         setting.rate = 1
                         logger('超过允许设置的最大倍数，已重置为1倍速。', 'red')
                     } else {
-                        logger("视频进度每隔40秒更新一次，请等待耐心等待...",'blue')
+                        logger("视频进度每隔40秒更新一次，请等待耐心等待...", 'blue')
                     }
                     logger("视频：" + name + "开始播放")
                     updateVideo(reportUrl, dtoken, classId, playingTime, duration, clipTime, objectId, otherInfo, jobId, userId, isdrag, _rt).then((status) => {
@@ -1350,6 +1350,128 @@ function toNextExam() {
     }
 }
 
+function uploadExam() {
+    logger('考试答案收录功能处于bate阶段，遇到bug请及时反馈!!', 'red')
+    logger('考试答案收录功能处于bate阶段，遇到bug请及时反馈!!', 'red')
+    logger('开始收录考试答案', 'green')
+    let TimuList = $('.mark_table .mark_item .questionLi')
+    let data = []
+    $.each(TimuList, (i, t) => {
+        let _a = {}
+        let _answer
+        let _answerTmpArr, _answerList = []
+        let TiMuFull = tidyStr($(t).find('h3').html())
+        let _type = ({ 单选题: 0, 多选题: 1, 填空题: 2, 判断题: 3, 简答题: 4 })[TiMuFull.match(/[(](.*?)[)]|$/)[1].replace(/,.*?分/, '')]
+        let _question = TiMuFull.replace(/^[(].*?[)]|$/, '').trim()
+        let _rightAns = $(t).find('.mark_answer').find('.colorGreen').text().replace(/正确答案[:：]/, '').trim()
+        switch (_type) {
+            case 0:
+                if (_rightAns.length <= 0) {
+                    _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
+                    _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
+                    if (_isTrue == 'marking_dui' || _isZero != '0') {
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                    } else {
+                        break
+                    }
+                }
+                _answerTmpArr = $(t).find('.mark_letter li')
+                $.each(_answerTmpArr, (a, b) => {
+                    _answerList.push(tidyStr($(b).html()).replace(/[A-Z].\s*/, ''))
+                })
+                let _i = ({ A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 })[_rightAns]
+                _answer = _answerList[_i]
+                _a['question'] = _question
+                _a['type'] = _type
+                _a['answer'] = _answer
+                data.push(_a)
+                break
+            case 1:
+                _answer = []
+                if (_rightAns.length <= 0) {
+                    _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
+                    _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
+                    if (_isTrue == 'marking_dui' || _isTrue == 'marking_bandui' || _isZero != '0') {
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                    } else {
+                        break
+                    }
+                }
+                _answerTmpArr = $(t).find('.mark_letter li')
+                $.each(_answerTmpArr, (a, b) => {
+                    _answerList.push(tidyStr($(b).html()).replace(/[A-Z].\s*/, ''))
+                })
+                $.each(_rightAns.split(''), (c, d) => {
+                    let _i = ({ A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 })[d]
+                    _answer.push(_answerList[_i])
+                })
+                _a['question'] = _question
+                _a['type'] = _type
+                _a['answer'] = _answer.join("#")
+                data.push(_a)
+                break
+            case 2:
+                _answerTmpArr = []
+                let answers = $(t).find('.mark_answer').find('.colorDeep').find('dd')
+                if (_rightAns.length <= 0) {
+                    $.each(answers, (i, t) => {
+                        _isTrue = $(t).find('span:eq(1)').attr('class')
+                        if (_isTrue == 'marking_dui') {
+                            _rightAns = $(t).find('span:eq(0)').html()
+                            _answerTmpArr.push(_rightAns.replace(/[(][0-9].*?[)]/, '').trim())
+                        } else {
+                            return
+                        }
+                    })
+                    _answer = _answerTmpArr.join('#')
+                } else {
+                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').slice(1)
+                }
+                if (_answer.length != 0) {
+                    _a['question'] = _question
+                    _a['type'] = _type
+                    _a['answer'] = _answer
+                    data.push(_a)
+                }
+                break
+            case 3:
+                if (_rightAns.length <= 0) {
+                    _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
+                    _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
+                    if (_isTrue == 'marking_dui' || _isZero != '0') {
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                    } else {
+                        let _true = '正确|是|对|√|T|ri'
+                        _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
+                        if (_true.indexOf(_rightAns) != -1) {
+                            _rightAns = '错'
+                        } else {
+                            _rightAns = '对'
+                        }
+                    }
+                }
+                _a['question'] = _question
+                _a['type'] = _type
+                _a['answer'] = _rightAns
+                data.push(_a)
+                break
+            case 4:
+                if (_rightAns.length <= 0) {
+                    break
+                }
+                _a['question'] = _question
+                _a['type'] = _type
+                _a['answer'] = _rightAns
+                data.push(_a)
+                break
+            default:
+                break
+        }
+    })
+    setTimeout(() => { uploadAnswer(data) }, 1500)
+
+}
+
 function refreshCourseList() {
     let _p = parseUrlParams()
     return new Promise((resolve, reject) => {
@@ -1517,24 +1639,10 @@ function upLoadWork(index, doms, dom) {
             continue
         }
     }
-    GM_xmlhttpRequest({
-        url: _host + '/index.php/cxapi/upload/newup',
-        data: 'data=' + encodeURIComponent(JSON.stringify(data)),
-        method: 'POST',
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        onload: function (xhr) {
-            let res = $.parseJSON(xhr.responseText)
-            if (res['code'] == 1) {
-                logger('答案收录成功！！准备处理下一个任务。', 'green')
-            } else {
-                logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
-            }
-            _mlist.splice(0, 1)
-            _domList.splice(0, 1)
-            setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
-        }
+    uploadAnswer(data).then(() => {
+        _mlist.splice(0, 1)
+        _domList.splice(0, 1)
+        setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
     })
 }
 
@@ -1557,7 +1665,7 @@ function uploadHomeWork() {
                 if (_rightAns.length <= 0) {
                     _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
                     _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
-                    if (_isTrue == 'marking_dui' || _isZero !== '0') {
+                    if (_isTrue == 'marking_dui' || _isZero != '0') {
                         _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
                     } else {
                         return
@@ -1579,10 +1687,10 @@ function uploadHomeWork() {
                 if (_rightAns.length <= 0) {
                     _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
                     _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
-                    if (_isTrue == 'marking_dui' || _isTrue == 'marking_bandui' || _isZero !== '0') {
+                    if (_isTrue == 'marking_dui' || _isTrue == 'marking_bandui' || _isZero != '0') {
                         _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
                     } else {
-                        return
+                        break
                     }
                 }
                 _answerTmpArr = $(t).find('.mark_letter li')
@@ -1615,16 +1723,18 @@ function uploadHomeWork() {
                 } else {
                     _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').slice(1)
                 }
-                _a['question'] = TiMu
-                _a['type'] = TiMuType
-                _a['answer'] = _answer
-                data.push(_a)
+                if (_answer.length != 0) {
+                    _a['question'] = TiMu
+                    _a['type'] = TiMuType
+                    _a['answer'] = _answer
+                    data.push(_a)
+                }
                 break
             case 3:
                 if (_rightAns.length <= 0) {
                     _isTrue = $(t).find('.mark_answer').find('.mark_score span').attr('class')
                     _isZero = $(t).find('.mark_answer').find('.mark_score .totalScore.fr i').text()
-                    if (_isTrue == 'marking_dui' || _isZero !== '0') {
+                    if (_isTrue == 'marking_dui' || _isZero != '0') {
                         _rightAns = $(t).find('.mark_answer').find('.colorDeep').text().replace(/我的答案[:：]/, '').trim()
                     } else {
                         let _true = '正确|是|对|√|T|ri'
@@ -1652,23 +1762,7 @@ function uploadHomeWork() {
                 break
         }
     })
-    GM_xmlhttpRequest({
-        url: _host + '/index.php/cxapi/upload/newup',
-        data: 'data=' + encodeURIComponent(JSON.stringify(data))
-        ,
-        method: 'POST',
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        onload: function (xhr) {
-            let res = $.parseJSON(xhr.responseText)
-            if (res['code'] == 1) {
-                logger('答案收录成功！！此次收录'+res['t']+'道题目，准备处理下一个任务。', 'green')
-            } else {
-                logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
-            }
-        }
-    })
+    setTimeout(() => { uploadAnswer(data) }, 1500)
 }
 
 function getEnc(a, b, c, d, e, f, g) {
@@ -1755,53 +1849,53 @@ function getAnswer(_t, _q) {
     })
 }
 
-function fuckCxFontByWyn($dom) {
-    /**
-     * Author wyn665817
-     * https://scriptcat.org/script-show-page/432
-     */
-    logger('开始解析网页加密字体...(方法来自wyn665817大神)', 'red')
-    var $tip = $frame_c.find('style:contains(font-cxsecret)');
-    if (!$tip.length) return;
+// function fuckCxFontByWyn($dom) {
+//     /**
+//      * Author wyn665817
+//      * https://scriptcat.org/script-show-page/432
+//      */
+//     logger('开始解析网页加密字体...(方法来自wyn665817大神)', 'red')
+//     var $tip = $frame_c.find('style:contains(font-cxsecret)');
+//     if (!$tip.length) return;
 
-    var font = $tip.text().match(/base64,([\w\W]+?)'/)[1];
-    font = Typr.parse(base64ToUint8Array(font))[0];
+//     var font = $tip.text().match(/base64,([\w\W]+?)'/)[1];
+//     font = Typr.parse(base64ToUint8Array(font))[0];
 
-    var table = JSON.parse(GM_getResourceText('Table'));
-    var match = {};
-    for (var i = 19968; i < 40870; i++) {
-        $tip = Typr.U.codeToGlyph(font, i);
-        if (!$tip) continue;
-        $tip = Typr.U.glyphToPath(font, $tip);
-        $tip = md5(JSON.stringify($tip)).slice(24);
-        match[i] = table[$tip];
-    }
+//     var table = JSON.parse(GM_getResourceText('Table'));
+//     var match = {};
+//     for (var i = 19968; i < 40870; i++) {
+//         $tip = Typr.U.codeToGlyph(font, i);
+//         if (!$tip) continue;
+//         $tip = Typr.U.glyphToPath(font, $tip);
+//         $tip = md5(JSON.stringify($tip)).slice(24);
+//         match[i] = table[$tip];
+//     }
 
-    $frame_c.find('.font-cxsecret').html(function (index, html) {
-        $.each(match, function (key, value) {
-            key = String.fromCharCode(key);
-            value = String.fromCharCode(value);
-            html = html.replaceAll(key, value);
-        });
-        return html;
-    }).removeClass('font-cxsecret');
-    logger('解析网页加密字体成功。(方法来自wyn665817大神)', 'red')
-}
+//     $frame_c.find('.font-cxsecret').html(function (index, html) {
+//         $.each(match, function (key, value) {
+//             key = String.fromCharCode(key);
+//             value = String.fromCharCode(value);
+//             html = html.replaceAll(key, value);
+//         });
+//         return html;
+//     }).removeClass('font-cxsecret');
+//     logger('解析网页加密字体成功。(方法来自wyn665817大神)', 'red')
+// }
 
-function base64ToUint8Array(base64) {
-    var data = window.atob(base64);
-    var buffer = new Uint8Array(data.length);
-    for (var i = 0; i < data.length; ++i) {
-        buffer[i] = data.charCodeAt(i);
-    }
-    return buffer;
-}
+// function base64ToUint8Array(base64) {
+//     var data = window.atob(base64);
+//     var buffer = new Uint8Array(data.length);
+//     for (var i = 0; i < data.length; ++i) {
+//         buffer[i] = data.charCodeAt(i);
+//     }
+//     return buffer;
+// }
 
 function doWork(index, doms, dom) {
     $frame_c = $(dom).contents();
-    if (setting.decrypt) {
-        fuckCxFontByWyn()
-    }
+    // if (setting.decrypt) {
+    //     fuckCxFontByWyn()
+    // }
     let $CyHtml = $frame_c.find('.CeYan')
     let TiMuList = $CyHtml.find('.TiMu')
     $subBtn = $CyHtml.find('.ZY_sub').find('.Btn_blue_1')
@@ -1942,6 +2036,30 @@ function startDoWork(index, doms, c, TiMuList) {
             })
             break
     }
+}
+
+function uploadAnswer(data) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            url: _host + '/index.php/cxapi/upload/newup',
+            data: 'data=' + encodeURIComponent(JSON.stringify(data)),
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            onload: function (xhr) {
+                let res = $.parseJSON(xhr.responseText)
+                if (res['code'] == 1) {
+                    logger('答案收录成功！！此次收录' + res['t'] + '道题目，准备处理下一个任务。', 'green')
+                    resolve()
+                } else {
+                    logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
+                    resolve()
+                }
+            }
+        })
+    })
+
 }
 
 function switchMission() {
