@@ -4,7 +4,6 @@
 // @version             1.5.9
 // @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试\考试答案收录、视频倍速\秒过、文档秒过、章节测验答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
-// @icon                https://api.gocos.cn/logo.ico
 // @match               *://*.chaoxing.com/*
 // @match               *://*.edu.cn/*
 // @match               *://*.nbdlib.cn/*
@@ -21,6 +20,7 @@
 // @require             https://cdn.staticfile.org/limonte-sweetalert2/11.0.1/sweetalert2.all.min.js
 // @require             https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js
 // @resource            Table https://www.forestpolice.org/ttf/2.0/table.json
+// @icon                https://cdn.521daigua.cn/logo.ico
 // @supportURL          https://script.521daigua.cn/UserGuide/faq.html
 // @homepage            https://script.521daigua.cn
 // @contributionURL     https://afdian.net/@Ne_21
