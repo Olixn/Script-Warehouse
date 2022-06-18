@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.5.9
+// @version             1.6.0
 // @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试\考试答案收录、视频倍速\秒过、文档秒过、章节测验答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -1418,14 +1418,14 @@ function uploadExam() {
                         _isTrue = $(t).find('span:eq(1)').attr('class')
                         if (_isTrue == 'marking_dui') {
                             _rightAns = $(t).find('span:eq(0)').html()
-                            _answerTmpArr.push(_rightAns.replace(/[(][0-9].*?[)]/, '').trim())
+                            _answerTmpArr.push(_rightAns.replace(/[(][0-9].*?[)]/, '').replace(/第.*?空:/, '').trim())
                         } else {
                             return
                         }
                     })
                     _answer = _answerTmpArr.join('#')
                 } else {
-                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').slice(1)
+                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').replace(/第.*?空:/g, '#').replace(/^#*/,'')
                 }
                 if (_answer.length != 0) {
                     _a['question'] = _question
@@ -1714,14 +1714,14 @@ function uploadHomeWork() {
                         _isTrue = $(t).find('span:eq(1)').attr('class')
                         if (_isTrue == 'marking_dui') {
                             _rightAns = $(t).find('span:eq(0)').html()
-                            _answerTmpArr.push(_rightAns.replace(/[(][0-9].*?[)]/, '').trim())
+                            _answerTmpArr.push(_rightAns.replace(/[(][0-9].*?[)]/, '').replace(/第.*?空:/, '').trim())
                         } else {
                             return
                         }
                     })
                     _answer = _answerTmpArr.join('#')
                 } else {
-                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').slice(1)
+                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').replace(/第.*?空:/g, '#').replace(/^#*/,'')
                 }
                 if (_answer.length != 0) {
                     _a['question'] = TiMu
