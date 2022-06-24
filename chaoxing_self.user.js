@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
 // @namespace           nawlgzs@gmail.com
-// @version             1.6.0
+// @version             1.6.1
 // @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试\考试答案收录、视频倍速\秒过、文档秒过、章节测验答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -19,7 +19,6 @@
 // @grant               GM_getResourceText
 // @require             https://cdn.staticfile.org/limonte-sweetalert2/11.0.1/sweetalert2.all.min.js
 // @require             https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js
-// @resource            Table https://www.forestpolice.org/ttf/2.0/table.json
 // @icon                https://cdn.521daigua.cn/logo.ico
 // @supportURL          https://script.521daigua.cn/UserGuide/faq.html
 // @homepage            https://script.521daigua.cn
@@ -41,12 +40,13 @@ var setting = {
     review: 0,      // 复习模式，0为关闭，1为开启可以补挂视频时长
 
     work: 1,        // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
-    // decrypt: 0,     // 解密加密字体，0为关闭，1为开启，目前好像cx取消加密了
+    // decrypt: 0,     // 解密加密字体，0为关闭，1为开启，目前好像cx取消加密了，1.6.0及以上版本已移除此功能
     time: 5000,     // 答题时间间隔，默认5s=5000ms
     sub: 1,         // 测验自动提交，0为关闭,1为开启，当没答案时测验将不会提交，如需提交请设置force：1
     force: 0,       // 测验强制提交，0为关闭，1为开启，开启此功能将会强制提交测验（无论作答与否）
 
     examTurn: 1,     // 考试自动跳转下一题，0为关闭，1为开启
+    examTurnTime: 0, // 考试自动跳转下一题随机间隔时间(3-7s)之间，0为关闭，1为开启
 
     autoLogin: 0,   // 自动登录，0为关闭，1为开启，开启此功能请配置登陆配置项
     phone: '',      // 登录配置项：登录手机号/超星号
@@ -230,13 +230,13 @@ function showBox() {
         <div id="ne-21log" style="max-height:100px;"></div>
     </div>`;
         $(box_html).appendTo('body');
+        $(document).keydown(function (e) {
+            if (e.keyCode == 75) {
+                let show = $('#ne-21box').css('display');
+                $('#ne-21box').css('display', show == 'block' ? 'none' : 'block');
+            }
+        })
     }
-    $(document).keydown(function (e) {
-        if (e.keyCode == 75) {
-            let show = $('#ne-21box').css('display');
-            $('#ne-21box').css('display', show == 'block' ? 'none' : 'block');
-        }
-    })
     let _u = getCk('_uid') || getCk('UID')
     GM_xmlhttpRequest({
         method: 'GET',
@@ -246,7 +246,7 @@ function showBox() {
             if (xhr.status == 200) {
                 var obj = $.parseJSON(xhr.responseText) || {};
                 var notice = obj.injection;
-                localStorage.setItem('token', obj.token ? obj.token : '')
+                localStorage.setItem('netok', obj.token ? obj.token : '')
                 $('#ne-21notice').html(notice);
             }
         },
@@ -1344,7 +1344,7 @@ function toNextExam() {
         let $nextbtn = $_examtable.find('.nextDiv a')
         setTimeout(() => {
             $nextbtn.click()
-        }, 2000)
+        }, setting.examTurnTime ? 2000 + (Math.floor(Math.random() * 5 + 1) * 1000) : 2000)
     } else {
         logger('用户设置不自动跳转下一题，请手动点击', 'blue')
     }
@@ -1425,7 +1425,7 @@ function uploadExam() {
                     })
                     _answer = _answerTmpArr.join('#')
                 } else {
-                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').replace(/第.*?空:/g, '#').replace(/^#*/,'')
+                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').replace(/第.*?空:/g, '#').replace(/^#*/, '')
                 }
                 if (_answer.length != 0) {
                     _a['question'] = _question
@@ -1577,12 +1577,12 @@ function upLoadWork(index, doms, dom) {
         _a['question'] = _question
         _a['type'] = _TimuType
         let _selfAnswerCheck = $(TiMuList[i]).find('.Py_answer.clearfix > i').attr('class')
-        let fuckFont = $(TiMuList[i]).find('.Zy_TItle.clearfix > div').attr('class')
-        if (fuckFont != 'clearfix') {
-            logger('题目检测可能存在加密乱码，暂停录入!!!!!!!!', 'red')
-            logger('获取的题目：' + _question, 'red')
-            return
-        }
+        // let fuckFont = $(TiMuList[i]).find('.Zy_TItle.clearfix > div').attr('class')
+        // if (fuckFont != 'clearfix') {
+        //     logger('题目检测可能存在加密乱码，暂停录入!!!!!!!!', 'red')
+        //     logger('获取的题目：' + _question, 'red')
+        //     return
+        // }
         switch (_TimuType) {
             case 0:
                 if (_selfAnswerCheck == "fr dui") {
@@ -1611,7 +1611,7 @@ function upLoadWork(index, doms, dom) {
                 let _TAnswer = []
                 $.each(_TAnswerArr, (_, item) => {
                     if ($(item).find('i').attr('class') == 'fr dui') {
-                        _TAnswer.push($(item).find('p').html())
+                        _TAnswer.push($(item).find('p').html().replace(/[(][0-9].*?[)]/, '').replace(/第.*?空:/, '').trim())
                     }
                 })
                 if (_TAnswer.length <= 0) { break }
@@ -1721,7 +1721,7 @@ function uploadHomeWork() {
                     })
                     _answer = _answerTmpArr.join('#')
                 } else {
-                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').replace(/第.*?空:/g, '#').replace(/^#*/,'')
+                    _answer = _rightAns.replace(/\s/g, '').replace(/[(][0-9].*?[)]/g, '#').replace(/第.*?空:/g, '#').replace(/^#*/, '')
                 }
                 if (_answer.length != 0) {
                     _a['question'] = TiMu
@@ -1773,7 +1773,7 @@ function getEnc(a, b, c, d, e, f, g) {
                 method: 'GET',
                 timeout: 3000,
                 headers: {
-                    'Authorization': localStorage.getItem('token')
+                    'Authorization': localStorage.getItem('netok')
                 },
                 onload: function (xhr) {
                     let res = $.parseJSON(xhr.responseText)
@@ -1804,10 +1804,10 @@ function getAnswer(_t, _q) {
         let _u = getCk('_uid') || getCk('UID')
         GM_xmlhttpRequest({
             method: 'POST',
-            url: _cxhost + '/cx/getanswer',
+            url: _cxhost + '/cx/getanswer?v=' + GM_info['script']['version'],
             headers: {
                 'Content-type': 'application/x-www-form-urlencoded',
-                'Authorization': localStorage.getItem('token')
+                'Authorization': localStorage.getItem('netok')
             },
             data: 'question=' + encodeURIComponent(_q) + '&u=' + _u,
             timeout: setting.time,
@@ -2041,7 +2041,7 @@ function startDoWork(index, doms, c, TiMuList) {
 function uploadAnswer(data) {
     return new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
-            url: _host + '/index.php/cxapi/upload/newup',
+            url: _host + '/index.php/cxapi/upload/newup?v=' + GM_info['script']['version'],
             data: 'data=' + encodeURIComponent(JSON.stringify(data)),
             method: 'POST',
             headers: {
