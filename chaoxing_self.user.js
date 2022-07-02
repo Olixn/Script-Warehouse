@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name                超星学习小助手(娱乐bate版)|适配新版界面|聚合题库|(视频、测验、考试)
+// @name                超星学习小助手(娱乐bate版)|新版界面|视频、测验、考试、作业|聚合题库(支持自动收录题库)
 // @namespace           nawlgzs@gmail.com
-// @version             1.6.1
+// @version             1.6.2
 // @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试\考试答案收录、视频倍速\秒过、文档秒过、章节测验答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -22,9 +22,7 @@
 // @icon                https://cdn.521daigua.cn/logo.ico
 // @supportURL          https://script.521daigua.cn/UserGuide/faq.html
 // @homepage            https://script.521daigua.cn
-// @contributionURL     https://afdian.net/@Ne_21
 // @antifeature         payment
-// @license             MIT
 // ==/UserScript==
 
 
@@ -40,7 +38,6 @@ var setting = {
     review: 0,      // 复习模式，0为关闭，1为开启可以补挂视频时长
 
     work: 1,        // 测验自动处理，0为关闭，1为开启，开启将会处理测验，关闭会跳过测验
-    // decrypt: 0,     // 解密加密字体，0为关闭，1为开启，目前好像cx取消加密了，1.6.0及以上版本已移除此功能
     time: 5000,     // 答题时间间隔，默认5s=5000ms
     sub: 1,         // 测验自动提交，0为关闭,1为开启，当没答案时测验将不会提交，如需提交请设置force：1
     force: 0,       // 测验强制提交，0为关闭，1为开启，开启此功能将会强制提交测验（无论作答与否）
@@ -108,8 +105,6 @@ var _w = unsafeWindow,
     _d = _w.document,
     $ = _w.jQuery || top.jQuery,
     UE = _w.UE,
-    // Typr = Typr || window.Typr,
-    // md5 = md5 || window.md5,
     Swal = Swal || window.Swal,
     _host = "https://api.gocos.cn",
     _cxhost = "https://api-cx.gocos.cn";
@@ -1577,12 +1572,6 @@ function upLoadWork(index, doms, dom) {
         _a['question'] = _question
         _a['type'] = _TimuType
         let _selfAnswerCheck = $(TiMuList[i]).find('.Py_answer.clearfix > i').attr('class')
-        // let fuckFont = $(TiMuList[i]).find('.Zy_TItle.clearfix > div').attr('class')
-        // if (fuckFont != 'clearfix') {
-        //     logger('题目检测可能存在加密乱码，暂停录入!!!!!!!!', 'red')
-        //     logger('获取的题目：' + _question, 'red')
-        //     return
-        // }
         switch (_TimuType) {
             case 0:
                 if (_selfAnswerCheck == "fr dui") {
@@ -1849,53 +1838,9 @@ function getAnswer(_t, _q) {
     })
 }
 
-// function fuckCxFontByWyn($dom) {
-//     /**
-//      * Author wyn665817
-//      * https://scriptcat.org/script-show-page/432
-//      */
-//     logger('开始解析网页加密字体...(方法来自wyn665817大神)', 'red')
-//     var $tip = $frame_c.find('style:contains(font-cxsecret)');
-//     if (!$tip.length) return;
-
-//     var font = $tip.text().match(/base64,([\w\W]+?)'/)[1];
-//     font = Typr.parse(base64ToUint8Array(font))[0];
-
-//     var table = JSON.parse(GM_getResourceText('Table'));
-//     var match = {};
-//     for (var i = 19968; i < 40870; i++) {
-//         $tip = Typr.U.codeToGlyph(font, i);
-//         if (!$tip) continue;
-//         $tip = Typr.U.glyphToPath(font, $tip);
-//         $tip = md5(JSON.stringify($tip)).slice(24);
-//         match[i] = table[$tip];
-//     }
-
-//     $frame_c.find('.font-cxsecret').html(function (index, html) {
-//         $.each(match, function (key, value) {
-//             key = String.fromCharCode(key);
-//             value = String.fromCharCode(value);
-//             html = html.replaceAll(key, value);
-//         });
-//         return html;
-//     }).removeClass('font-cxsecret');
-//     logger('解析网页加密字体成功。(方法来自wyn665817大神)', 'red')
-// }
-
-// function base64ToUint8Array(base64) {
-//     var data = window.atob(base64);
-//     var buffer = new Uint8Array(data.length);
-//     for (var i = 0; i < data.length; ++i) {
-//         buffer[i] = data.charCodeAt(i);
-//     }
-//     return buffer;
-// }
 
 function doWork(index, doms, dom) {
     $frame_c = $(dom).contents();
-    // if (setting.decrypt) {
-    //     fuckCxFontByWyn()
-    // }
     let $CyHtml = $frame_c.find('.CeYan')
     let TiMuList = $CyHtml.find('.TiMu')
     $subBtn = $CyHtml.find('.ZY_sub').find('.Btn_blue_1')
@@ -1929,11 +1874,6 @@ function startDoWork(index, doms, c, TiMuList) {
                     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
                 }, 3000)
             }, 5000)
-            // } else if (!setting.task) {
-            //     logger('此测验不属于任务点，准备跳过。', 'red')
-            //     _mlist.splice(0, 1)
-            //     _domList.splice(0, 1)
-            //     setTimeout(() => { startDoCyWork(index + 1, doms) }, 3000)
         } else {
             logger('测验处理完成，存在无答案题目或者用户设置不提交。', 'red')
         }
@@ -2038,22 +1978,31 @@ function startDoWork(index, doms, c, TiMuList) {
     }
 }
 
-function uploadAnswer(data) {
+function uploadAnswer(a) {
     return new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
             url: _host + '/index.php/cxapi/upload/newup?v=' + GM_info['script']['version'],
-            data: 'data=' + encodeURIComponent(JSON.stringify(data)),
+            data: 'data=' + encodeURIComponent(JSON.stringify(a)),
             method: 'POST',
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded"
             },
             onload: function (xhr) {
-                let res = $.parseJSON(xhr.responseText)
-                if (res['code'] == 1) {
-                    logger('答案收录成功！！此次收录' + res['t'] + '道题目，准备处理下一个任务。', 'green')
+                try {
+                    let res = $.parseJSON(xhr.responseText)
+                    if (res['code'] == 1) {
+                        logger('答案收录成功！！此次收录' + res['t'] + '道题目，准备处理下一个任务。', 'green')
+                    } else {
+                        logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
+                    }
                     resolve()
-                } else {
-                    logger('答案收录失败了，请向作者反馈，准备处理下一个任务。', 'red')
+                } catch {
+                    let res = xhr.responseText
+                    if (res.indexOf('防火墙')!=-1) {
+                        logger('答案收录失败了，已被防火墙拦截，请联系作者手动收录。', 'red')
+                    } else {
+                        logger('答案收录失败了，未知错误，请向作者反馈。', 'red')
+                    }
                     resolve()
                 }
             }
