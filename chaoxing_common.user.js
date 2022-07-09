@@ -1,14 +1,15 @@
 // ==UserScript==
 // @name         超星网课助手(非考试版)|聚合题库|自动挂机|支持章节、作业、视频
-// @version      4.1.15
+// @version      4.1.16
 // @namespace    Lemon_Tea
-// @description  [修复视频静音][修复视频自动播放][自动切换旧版学习通][修复视频黑屏]自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
+// @description  自动挂机看尔雅MOOC，支持视频、音频、文档、图书自动完成，章节测验自动答题提交，支持自动切换任务点、挂机阅读时长、自动登录等，解除各类功能限制，开放自定义参数
 // @author       Lemon_Tea
 // @match        *://*.chaoxing.com/*
 // @match        *://*.edu.cn/*
 // @match        *://*.nbdlib.cn/*
 // @match        *://*.hnsyu.net/*
 // @connect      api.gocos.cn
+// @connect      api-cx.gocos.cn
 // @run-at       document-end
 // @grant        unsafeWindow
 // @grant        GM_xmlhttpRequest
@@ -363,6 +364,10 @@ function relieveLimit() {
     });
 }
 
+function getCookies(name){
+        return document.cookie.match(`[;\s+]?${name}=([^;]*)`)?.pop();
+}
+
 function beforeFind() {
     setting.regl = parent.greenligth || $.noop;
     if ($.type(parent._data) == 'array') return setting.regl();
@@ -458,14 +463,17 @@ function beforeFind() {
     var tip = ({ undefined: '任务点排队中', null: '等待切换中' })[setting.tip];
     tip && setting.div.children('div:eq(0)').data('html', tip).siblings('button:eq(0)').click();
 
+    let _u = getCookies('_uid') || getCookies('UID')
+    let _cxhost = 'https://api-cx.gocos.cn'
     GM_xmlhttpRequest({
         method: 'GET',
-        url: apihost + '/cxtimu/notice',
+        url: _cxhost + '/notice?u=' + _u + '&v=old',
         timeout: setting.time,
         onload: function (xhr) {
             if (xhr.status == 200) {
                 var obj = $.parseJSON(xhr.responseText) || {};
                 setting.notice = obj.injection;
+                localStorage.setItem('netok', obj.token ? obj.token : '')
                 document.querySelector('#cx-notice').innerHTML = setting.notice;
             }
         },
@@ -492,13 +500,16 @@ function findAnswer() {
     }
     console.log($TiMu.find('.mark_name:eq(0) .colorDeep'));
 
+    let _u = getCookies('_uid') || getCookies('UID')
+    let _cxhost = 'https://api-cx.gocos.cn'
     GM_xmlhttpRequest({
         method: 'POST',
-        url: apihost + '/cxtimu/getanswer?v=2',
+        url: _cxhost + '/cx/getanswer',
         headers: {
             'Content-type': 'application/x-www-form-urlencoded',
+            'Authorization': localStorage.getItem('netok')
         },
-        data: 'question=' + encodeURIComponent(question),
+        data: 'question=' + encodeURIComponent(question) + '&u=' + _u,
         timeout: setting.time,
         onload: function (xhr) {
             if (!setting.loop) {
