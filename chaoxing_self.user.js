@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                超星学习小助手(娱乐bate版)|新版界面|视频、测验、考试、作业|聚合题库(支持自动收录题库)
 // @namespace           nawlgzs@gmail.com
-// @version             1.6.2
+// @version             1.6.3
 // @description         推荐使用edge+ScriptCat运行此脚本，感谢油猴中文网的各位大神，学油猴脚本来油猴中文网就对了。实现功能：开放自定义设置、新版考试\考试答案收录、视频倍速\秒过、文档秒过、章节测验答题、收录答案、作业、收录作业答案、读书秒过。
 // @author              Ne-21
 // @match               *://*.chaoxing.com/*
@@ -16,13 +16,10 @@
 // @grant               GM_setValue
 // @grant               GM_getValue
 // @grant               GM_info
-// @grant               GM_getResourceText
 // @require             https://cdn.staticfile.org/limonte-sweetalert2/11.0.1/sweetalert2.all.min.js
 // @require             https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js
 // @icon                https://cdn.521daigua.cn/logo.ico
-// @supportURL          https://script.521daigua.cn/UserGuide/faq.html
 // @homepage            https://script.521daigua.cn
-// @antifeature         payment
 // ==/UserScript==
 
 
@@ -111,7 +108,6 @@ var _w = unsafeWindow,
 
 var _mlist, _defaults, _domList, $subBtn, $saveBtn, $frame_c;
 
-// 强制体验新版，防止出现一些睿智问题
 $('.navshow').find('a:contains(体验新版)')[0] ? $('.navshow').find('a:contains(体验新版)')[0].click() : '';
 
 if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
@@ -160,7 +156,6 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
     showBox()
     setTimeout(() => { uploadHomeWork() }, 3000)
 } else if (_l.pathname == '/work/phone/doHomeWork') {
-    // FUCK ALERT
     _oldal = _w.alert
     _w.alert = function (msg) {
         if (msg == '保存成功') {
@@ -168,7 +163,6 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
         }
         return _oldal(msg)
     }
-    // FUCK CONFIRM ALERT
     _oldcf = _w.confirm
     _w.confirm = function (msg) {
         if (msg == '确认提交？' || msg.includes('未做完')) {
@@ -179,7 +173,7 @@ if (_l.hostname == 'i.mooc.chaoxing.com' || _l.hostname == "i.chaoxing.com") {
 } else if (_l.pathname == '/mooc2/exam/exam-list') {
     Swal.fire('注意：专业课可能会存在答案不全或无答案，请谨慎使用脚本考试，开始考试之前请确保该账号已激活脚本。')
 } else {
-    console.log(_l.pathname)
+    // console.log(_l.pathname)
 }
 
 function parseUrlParams() {
@@ -1762,7 +1756,7 @@ function getEnc(a, b, c, d, e, f, g) {
                 method: 'GET',
                 timeout: 3000,
                 headers: {
-                    'Authorization': localStorage.getItem('netok')
+                    // 'Authorization': localStorage.getItem('netok')
                 },
                 onload: function (xhr) {
                     let res = $.parseJSON(xhr.responseText)
@@ -1998,7 +1992,7 @@ function uploadAnswer(a) {
                     resolve()
                 } catch {
                     let res = xhr.responseText
-                    if (res.indexOf('防火墙')!=-1) {
+                    if (res.indexOf('防火墙') != -1) {
                         logger('答案收录失败了，已被防火墙拦截，请联系作者手动收录。', 'red')
                     } else {
                         logger('答案收录失败了，未知错误，请向作者反馈。', 'red')
